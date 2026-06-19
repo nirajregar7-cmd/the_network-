@@ -1,11 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(cors());
@@ -440,5 +444,14 @@ app.post('/api/seed/communities', async (req, res) => {
   }
 });
 
-const PORT = process.env.API_PORT || 3001;
-app.listen(PORT, () => console.log(`API server running on port ${PORT}`));
+// Serve built frontend in production
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.resolve(__dirname, '../dist');
+  app.use(express.static(distPath));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+const PORT = process.env.PORT || (process.env.NODE_ENV === 'production' ? 8080 : 3001);
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
