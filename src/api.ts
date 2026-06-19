@@ -27,6 +27,7 @@ export const api = {
     update: (id: string, data: any) => put(`/users/${id}`, data),
     toggleSuspend: (id: string) => put(`/users/${id}/suspend`, {}),
     resetPassword: (id: string, newPassword: string) => put(`/users/${id}/reset-password`, { newPassword }),
+    bulkImport: (rows: any[]) => post('/admin/import-users', { rows }),
   },
   posts: {
     getAll: () => get('/posts'),

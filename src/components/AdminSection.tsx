@@ -4,7 +4,8 @@ import {
   ShieldCheck, Users, AlertTriangle, Trash2,
   ShieldAlert, X, Search, GraduationCap,
   TrendingUp, UserX, FileText, ChevronDown, ChevronUp,
-  Calendar, Mail, BookOpen, KeyRound, Eye, EyeOff
+  Calendar, Mail, BookOpen, KeyRound, Eye, EyeOff,
+  Upload, Download, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import Avatar from './Avatar';
 import { api } from '../api';
@@ -21,7 +22,7 @@ interface AdminSectionProps {
   darkMode: boolean;
 }
 
-type AdminTab = 'users' | 'reports' | 'posts';
+type AdminTab = 'users' | 'reports' | 'posts' | 'import';
 
 export default function AdminSection({
   currentUser,
@@ -45,6 +46,13 @@ export default function AdminSection({
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
+  const [csvRaw, setCsvRaw] = useState('');
+  const [csvRows, setCsvRows] = useState<any[]>([]);
+  const [csvError, setCsvError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ inserted: number; skipped: number; errors: string[] } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
   const handleResetPassword = async (userId: string) => {
     if (!resetPassword.trim() || resetPassword.length < 4) return;
     setResetLoading(true);
@@ -59,6 +67,68 @@ export default function AdminSection({
     } finally {
       setResetLoading(false);
     }
+  };
+
+  const parseCSV = (text: string) => {
+    setCsvError('');
+    setImportResult(null);
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) { setCsvError('CSV must have a header row and at least one data row.'); setCsvRows([]); return; }
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_').replace(/['"]/g, ''));
+    const required = ['full_name', 'email'];
+    const missing = required.filter(r => !headers.includes(r));
+    if (missing.length > 0) { setCsvError(`Missing required columns: ${missing.join(', ')}`); setCsvRows([]); return; }
+    const rows = lines.slice(1).map(line => {
+      const vals = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+      const obj: any = {};
+      headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+      return {
+        fullName: obj['full_name'] || obj['name'] || '',
+        email: obj['email'] || '',
+        password: obj['password'] || obj['roll_no'] || obj['roll_number'] || '',
+        college: obj['college'] || obj['university'] || obj['institution'] || '',
+        branch: obj['branch'] || obj['department'] || obj['course'] || '',
+        year: obj['year'] || obj['yr'] || '1',
+        role: obj['role'] || 'student',
+      };
+    }).filter(r => r.email && r.fullName);
+    if (rows.length === 0) { setCsvError('No valid rows found. Make sure full_name and email columns have data.'); setCsvRows([]); return; }
+    setCsvRows(rows);
+  };
+
+  const handleFileUpload = (file: File) => {
+    if (!file.name.endsWith('.csv')) { setCsvError('Please upload a .csv file.'); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setCsvRaw(text);
+      parseCSV(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImport = async () => {
+    if (csvRows.length === 0) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await api.users.bulkImport(csvRows);
+      setImportResult(result);
+      setCsvRows([]);
+      setCsvRaw('');
+    } catch (err: any) {
+      setCsvError('Import failed: ' + err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const downloadTemplate = () => {
+    const csv = 'full_name,email,password,college,branch,year\nRaj Kumar,107124001@nitt.edu,pass123,NIT Tiruchirappalli,Computer Science,2\nPriya Singh,107124002@nitt.edu,pass123,NIT Tiruchirappalli,Mechanical,3\n';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'students_template.csv'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (currentUser.role !== 'admin') {
@@ -136,6 +206,7 @@ export default function AdminSection({
     { id: 'users', label: 'All Users', count: allUsers.length },
     { id: 'reports', label: 'Reports', count: pendingReports.length },
     { id: 'posts', label: 'Post Moderation', count: posts.length },
+    { id: 'import', label: 'CSV Import' },
   ];
 
   return (
@@ -517,6 +588,174 @@ export default function AdminSection({
             )}
           </div>
         )}
+        {/* CSV IMPORT TAB */}
+        {activeTab === 'import' && (
+          <div className="p-5 space-y-5">
+
+            {/* Instructions + template download */}
+            <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-[#09090C] border-white/10' : 'bg-indigo-50 border-indigo-100'}`}>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2 flex items-center gap-1.5">
+                <Upload size={13} /> Bulk Student Import via CSV
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
+                Upload a CSV file with your student data. Required columns: <code className="bg-indigo-500/10 text-indigo-500 px-1 rounded">full_name</code>, <code className="bg-indigo-500/10 text-indigo-500 px-1 rounded">email</code>. Optional: <code className="bg-neutral-200 dark:bg-white/10 px-1 rounded">password</code>, <code className="bg-neutral-200 dark:bg-white/10 px-1 rounded">college</code>, <code className="bg-neutral-200 dark:bg-white/10 px-1 rounded">branch</code>, <code className="bg-neutral-200 dark:bg-white/10 px-1 rounded">year</code>.
+              </p>
+              <p className="text-[10px] text-slate-400 mb-3">
+                If no password column is provided, the part before <code>@</code> in their email is used as the default password (e.g. <code>107124072@nitt.edu</code> → password is <code>107124072</code>).
+              </p>
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl border border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/10 text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors"
+              >
+                <Download size={11} /> Download Template CSV
+              </button>
+            </div>
+
+            {/* Drop zone */}
+            {!csvRows.length && !importResult && (
+              <div
+                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFileUpload(f); }}
+                className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
+                  dragOver
+                    ? 'border-indigo-500 bg-indigo-500/5'
+                    : darkMode ? 'border-white/10 hover:border-white/20' : 'border-neutral-300 hover:border-indigo-400'
+                }`}
+              >
+                <Upload size={28} className={`mx-auto mb-3 ${dragOver ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600'}`} />
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-1">
+                  Drag & drop your CSV file here
+                </p>
+                <p className="text-xs text-slate-400 mb-4">or</p>
+                <label className="py-2 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors">
+                  Browse File
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
+                  />
+                </label>
+              </div>
+            )}
+
+            {/* Error */}
+            {csvError && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                <p>{csvError}</p>
+              </div>
+            )}
+
+            {/* Preview table */}
+            {csvRows.length > 0 && !importResult && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    Preview — <span className="text-indigo-500">{csvRows.length} students</span> ready to import
+                  </p>
+                  <button
+                    onClick={() => { setCsvRows([]); setCsvRaw(''); setCsvError(''); }}
+                    className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer flex items-center gap-1"
+                  >
+                    <X size={11} /> Clear
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-white/10 max-h-64 overflow-y-auto">
+                  <table className="w-full text-left text-xs min-w-[500px]">
+                    <thead className={`sticky top-0 border-b border-neutral-200 dark:border-white/10 text-[9px] font-bold uppercase tracking-widest ${darkMode ? 'bg-[#09090C] text-slate-500' : 'bg-neutral-50 text-slate-400'}`}>
+                      <tr>
+                        <th className="p-2.5">#</th>
+                        <th className="p-2.5">Full Name</th>
+                        <th className="p-2.5">Email</th>
+                        <th className="p-2.5">Password</th>
+                        <th className="p-2.5">College</th>
+                        <th className="p-2.5">Branch</th>
+                        <th className="p-2.5">Year</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-white/5">
+                      {csvRows.slice(0, 100).map((r, i) => (
+                        <tr key={i} className={darkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-neutral-50'}>
+                          <td className="p-2.5 font-mono text-slate-400">{i + 1}</td>
+                          <td className="p-2.5 font-semibold">{r.fullName}</td>
+                          <td className="p-2.5 font-mono text-slate-500">{r.email}</td>
+                          <td className="p-2.5 font-mono text-slate-400">
+                            {r.password ? <span className="text-emerald-500">✓ set</span> : <span className="text-amber-500">→ {r.email.split('@')[0]}</span>}
+                          </td>
+                          <td className="p-2.5 text-slate-500">{r.college || '—'}</td>
+                          <td className="p-2.5 text-slate-500">{r.branch || '—'}</td>
+                          <td className="p-2.5 text-slate-500">{r.year || '1'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {csvRows.length > 100 && (
+                    <p className="text-center text-[10px] text-slate-400 p-3 border-t border-neutral-100 dark:border-white/5">
+                      + {csvRows.length - 100} more rows (all will be imported)
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleImport}
+                  disabled={importing}
+                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider cursor-pointer disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  {importing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Importing {csvRows.length} students...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={14} /> Import {csvRows.length} Students into Database
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Success result */}
+            {importResult && (
+              <div className="space-y-3">
+                <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-emerald-950/20 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle2 size={18} className="text-emerald-500" />
+                    <h3 className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">Import Complete</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className={`p-3 rounded-xl ${darkMode ? 'bg-emerald-900/20' : 'bg-emerald-100/60'}`}>
+                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{importResult.inserted}</p>
+                      <p className="font-semibold text-emerald-700 dark:text-emerald-500 uppercase text-[10px] tracking-wide mt-0.5">Students Added</p>
+                    </div>
+                    <div className={`p-3 rounded-xl ${darkMode ? 'bg-amber-900/20' : 'bg-amber-50'}`}>
+                      <p className="text-2xl font-black text-amber-500">{importResult.skipped}</p>
+                      <p className="font-semibold text-amber-600 uppercase text-[10px] tracking-wide mt-0.5">Skipped / Duplicates</p>
+                    </div>
+                  </div>
+                  {importResult.errors.length > 0 && (
+                    <div className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                      <p className="text-[10px] font-bold text-rose-500 uppercase mb-1">Errors ({importResult.errors.length})</p>
+                      {importResult.errors.slice(0, 5).map((e, i) => (
+                        <p key={i} className="text-[10px] font-mono text-rose-400">{e}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setImportResult(null); setCsvRows([]); setCsvRaw(''); setCsvError(''); }}
+                  className="py-2 px-4 rounded-xl border border-neutral-200 dark:border-white/10 text-xs font-bold cursor-pointer hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors"
+                >
+                  Import Another File
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -492,6 +492,63 @@ app.put('/api/reports/:id', async (req, res) => {
   }
 });
 
+// ─── BULK USER IMPORT ────────────────────────────────────────────────────────
+
+app.post('/api/admin/import-users', async (req, res) => {
+  try {
+    const { rows } = req.body as {
+      rows: { fullName: string; email: string; password: string; college?: string; branch?: string; year?: number; role?: string }[]
+    };
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'rows array is required' });
+    }
+
+    const results = { inserted: 0, skipped: 0, errors: [] as string[] };
+
+    for (const row of rows) {
+      if (!row.email || !row.fullName) {
+        results.errors.push(`Skipped row — missing name or email: ${JSON.stringify(row)}`);
+        results.skipped++;
+        continue;
+      }
+      try {
+        const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, row.email.toLowerCase().trim()));
+        if (existing.length > 0) {
+          results.skipped++;
+          continue;
+        }
+        const initials = row.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+        await db.insert(users).values({
+          id: generateId('user'),
+          fullName: row.fullName.trim(),
+          college: row.college?.trim() || '',
+          branch: row.branch?.trim() || '',
+          year: Number(row.year) || 1,
+          email: row.email.toLowerCase().trim(),
+          passwordHash: hashPassword(row.password || row.email.split('@')[0]),
+          avatar: initials,
+          aboutMe: '',
+          interests: [],
+          skills: [],
+          lookingFor: [],
+          isVerified: false,
+          isSuspended: false,
+          role: (row.role === 'admin' ? 'admin' : 'student') as 'student' | 'admin',
+          privacySettings: { showEmail: true, onlyAllowVerifiedConnections: false, hideProfileFromSearch: false },
+        });
+        results.inserted++;
+      } catch (rowErr: any) {
+        results.errors.push(`${row.email}: ${rowErr.message}`);
+        results.skipped++;
+      }
+    }
+
+    return res.json(results);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── SEED COMMUNITIES (first run) ────────────────────────────────────────────
 
 app.post('/api/seed/communities', async (req, res) => {
