@@ -227,6 +227,7 @@ export default function App() {
       return;
     }
     setCurrentUser(user);
+    setActiveView('feed');
     const updatedUsers = allUsers.map(u => u.id === user.id ? { ...u, isVerified: true } : u);
     // Add user to general pool if missing
     if (!allUsers.some(u => u.id === user.id)) {
