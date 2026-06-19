@@ -1,0 +1,6 @@
+{
+  "name": "The Network",
+  "description": "An academic and interest-based networking platform for college students to collaborate, find study partners, and join communities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
