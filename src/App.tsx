@@ -256,7 +256,7 @@ export default function App() {
     const target = allUsers.find(u => u.id === userId);
     if (target && !target.isSuspended) {
       setCurrentUser(target);
-      setActiveView('dashboard');
+      setActiveView('feed');
     }
   };
 
