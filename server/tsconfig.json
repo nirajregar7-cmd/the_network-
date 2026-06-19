@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "strict": false,
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
+  },
+  "include": ["index.ts", "db.ts", "../shared/**/*"]
+}

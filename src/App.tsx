@@ -1,17 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UserProfile, Post, Community, Connection, DirectMessage, UserReport, Comment, Story } from './types';
-import {
-  INITIAL_COMMUNITIES,
-  INITIAL_USERS,
-  INITIAL_POSTS,
-  INITIAL_CONNECTIONS,
-  INITIAL_MESSAGES,
-  MOCK_REPORTS,
-  INITIAL_STORIES
-} from './data/mockData';
 import { ALL_PREDEFINED_CHAPTERS } from './data/chaptersData';
+import { api } from './api';
 
-// Modular layouts
 import AuthSection from './components/AuthSection';
 import DashboardSection from './components/DashboardSection';
 import DiscoverySection from './components/DiscoverySection';
@@ -22,7 +13,6 @@ import ProfileSection from './components/ProfileSection';
 import AdminSection from './components/AdminSection';
 import Avatar from './components/Avatar';
 
-// Lucide icons
 import {
   GraduationCap,
   LayoutDashboard,
@@ -35,14 +25,11 @@ import {
   LogOut,
   Palette,
   Sparkles,
-  RefreshCw,
-  Eye,
   Plus,
   X,
   Image as ImageIcon,
   Send,
   Sparkle,
-  ShieldCheck,
   Heart,
   Check
 } from 'lucide-react';
@@ -89,57 +76,24 @@ const ACTIVE_FEELING_PRESETS = [
 ];
 
 export default function App() {
-  // App states with LocalStorage persistence wrapper for durable testing
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('network_current_user');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const [allUsers, setAllUsers] = useState<UserProfile[]>(() => {
-    const saved = localStorage.getItem('network_all_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
-  const [posts, setPosts] = useState<Post[]>(() => {
-    const saved = localStorage.getItem('network_posts');
-    return saved ? JSON.parse(saved) : INITIAL_POSTS;
-  });
-
-  const [connections, setConnections] = useState<Connection[]>(() => {
-    const saved = localStorage.getItem('network_connections');
-    return saved ? JSON.parse(saved) : INITIAL_CONNECTIONS;
-  });
-
-  const [messages, setMessages] = useState<DirectMessage[]>(() => {
-    const saved = localStorage.getItem('network_messages');
-    return saved ? JSON.parse(saved) : INITIAL_MESSAGES;
-  });
-
-  const [communities, setCommunities] = useState<Community[]>(() => {
-    const saved = localStorage.getItem('network_communities_v3');
-    return saved ? JSON.parse(saved) : ALL_PREDEFINED_CHAPTERS;
-  });
-
-  const [reports, setReports] = useState<UserReport[]>(() => {
-    const saved = localStorage.getItem('network_reports');
-    return saved ? JSON.parse(saved) : MOCK_REPORTS;
-  });
-
-  const [stories, setStories] = useState<Story[]>(() => {
-    const saved = localStorage.getItem('network_stories');
-    return saved ? JSON.parse(saved) : INITIAL_STORIES;
-  });
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [reports, setReports] = useState<UserReport[]>([]);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [theme, setTheme] = useState<ThemeName>(() => {
     const saved = localStorage.getItem('network_theme') as ThemeName;
     if (saved && THEMES[saved]) return saved;
-    const oldDark = localStorage.getItem('network_dark_mode');
-    return oldDark === 'true' ? 'dark' : 'light';
+    return 'light';
   });
   const darkMode = THEMES[theme].isDark;
 
   const [activeView, setActiveView] = useState<string>('feed');
-  const [showDemoPortal, setShowDemoPortal] = useState<boolean>(false);
   const [showNewPostModal, setShowNewPostModal] = useState<boolean>(false);
   const [viewingUserProfileId, setViewingUserProfileId] = useState<string | null>(null);
   const [preSelectedMsgUserId, setPreSelectedMsgUserId] = useState<string | null>(null);
@@ -147,69 +101,18 @@ export default function App() {
   const [profileInterestsExpanded, setProfileInterestsExpanded] = useState<boolean>(false);
   const [profileLookingForExpanded, setProfileLookingForExpanded] = useState<boolean>(false);
 
-  useEffect(() => {
-    setProfileInterestsExpanded(false);
-    setProfileLookingForExpanded(false);
-  }, [viewingUserProfileId]);
-
-  // New Post Modal Fields State
   const [modalPostContent, setModalPostContent] = useState('');
   const [modalSelectedTag, setModalSelectedTag] = useState('Startup Pitch 🚀');
   const [modalSelectedFeeling, setModalSelectedFeeling] = useState('');
   const [modalSelectedCommunity, setModalSelectedCommunity] = useState('');
   const [modalProjectTitle, setModalProjectTitle] = useState('');
   const [modalPostImage, setModalPostImage] = useState('');
-  const [registeredEvents, setRegisteredEvents] = useState<string[]>(() => {
-    const saved = localStorage.getItem('network_registered_events');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [registeredEvents, setRegisteredEvents] = useState<string[]>([]);
 
   useEffect(() => {
-    localStorage.setItem('network_registered_events', JSON.stringify(registeredEvents));
-  }, [registeredEvents]);
-
-  const handleRegisterEvent = (eventId: string) => {
-    if (!registeredEvents.includes(eventId)) {
-      setRegisteredEvents(prev => [...prev, eventId]);
-    }
-  };
-
-  // Sync to state storage
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('network_current_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('network_current_user');
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('network_all_users', JSON.stringify(allUsers));
-  }, [allUsers]);
-
-  useEffect(() => {
-    localStorage.setItem('network_posts', JSON.stringify(posts));
-  }, [posts]);
-
-  useEffect(() => {
-    localStorage.setItem('network_connections', JSON.stringify(connections));
-  }, [connections]);
-
-  useEffect(() => {
-    localStorage.setItem('network_messages', JSON.stringify(messages));
-  }, [messages]);
-
-  useEffect(() => {
-    localStorage.setItem('network_communities_v3', JSON.stringify(communities));
-  }, [communities]);
-
-  useEffect(() => {
-    localStorage.setItem('network_reports', JSON.stringify(reports));
-  }, [reports]);
-
-  useEffect(() => {
-    localStorage.setItem('network_stories', JSON.stringify(stories));
-  }, [stories]);
+    setProfileInterestsExpanded(false);
+    setProfileLookingForExpanded(false);
+  }, [viewingUserProfileId]);
 
   useEffect(() => {
     localStorage.setItem('network_theme', theme);
@@ -219,184 +122,203 @@ export default function App() {
     if (THEMES[theme].isDark) html.classList.add('dark');
   }, [theme]);
 
-  // Auth Operations
-  const handleLogin = (user: UserProfile) => {
-    // If the logging student is suspended, reject entry
-    if (user.isSuspended) {
-      alert('Your student credentials have been suspended for violating academic policies. Please contact faculty council.');
-      return;
+  const loadAppData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [usersData, postsData, connectionsData, messagesData, storiesData, reportsData] = await Promise.all([
+        api.users.getAll(),
+        api.posts.getAll(),
+        api.connections.getAll(),
+        api.messages.getAll(),
+        api.stories.getAll(),
+        api.reports.getAll(),
+      ]);
+      setAllUsers(usersData);
+      setPosts(postsData);
+      setConnections(connectionsData);
+      setMessages(messagesData);
+      setStories(storiesData);
+      setReports(reportsData);
+
+      const commData = await api.communities.getAll();
+      if (commData.length === 0) {
+        await api.communities.seed(ALL_PREDEFINED_CHAPTERS);
+        const seeded = await api.communities.getAll();
+        setCommunities(seeded);
+      } else {
+        setCommunities(commData);
+      }
+    } catch (err) {
+      console.error('Failed to load app data', err);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    loadAppData();
+  }, [loadAppData]);
+
+  const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
     setActiveView('feed');
-    const updatedUsers = allUsers.map(u => u.id === user.id ? { ...u, isVerified: true } : u);
-    // Add user to general pool if missing
-    if (!allUsers.some(u => u.id === user.id)) {
-      setAllUsers([...updatedUsers, user]);
-    } else {
-      setAllUsers(updatedUsers);
-    }
-  };
-
-  const handleRegister = (newUser: UserProfile) => {
     setAllUsers(prev => {
-      if (prev.some(u => u.email.toLowerCase() === newUser.email.toLowerCase())) {
-        return prev;
+      if (prev.some(u => u.id === user.id)) {
+        return prev.map(u => u.id === user.id ? user : u);
       }
-      return [...prev, newUser];
+      return [...prev, user];
     });
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    setActiveView('dashboard');
+    setActiveView('feed');
   };
 
-  // Switch Profiles auxiliary helper for quick evaluator demonstration
-  const handleSwapAccount = (userId: string) => {
-    const target = allUsers.find(u => u.id === userId);
-    if (target && !target.isSuspended) {
-      setCurrentUser(target);
-      setActiveView('feed');
+  const handleUpdateProfile = async (updatedProfile: UserProfile) => {
+    try {
+      const saved = await api.users.update(updatedProfile.id, updatedProfile);
+      setCurrentUser(saved);
+      setAllUsers(prev => prev.map(u => u.id === saved.id ? saved : u));
+    } catch (err) {
+      console.error('Failed to update profile', err);
     }
   };
 
-  // User Profile configuration
-  const handleUpdateProfile = (updatedProfile: UserProfile) => {
-    setCurrentUser(updatedProfile);
-    setAllUsers(prev => prev.map(u => u.id === updatedProfile.id ? updatedProfile : u));
-  };
-
-  // Connection System operations
-  const handleSendConnectionRequest = (
+  const handleSendConnectionRequest = async (
     receiverId: string,
     type: 'Startup Discussion' | 'Friendship' | 'Study Partner' | 'Hackathon Team',
     message: string
   ) => {
     if (!currentUser) return;
-    const newRequest: Connection = {
-      id: `conn-${Date.now()}`,
-      senderId: currentUser.id,
-      receiverId,
-      type,
-      message,
-      status: 'pending',
+    try {
+      const newConn = await api.connections.create({ senderId: currentUser.id, receiverId, type, message });
+      setConnections(prev => [...prev, newConn]);
+    } catch (err) {
+      console.error('Failed to send connection request', err);
+    }
+  };
+
+  const handleAcceptConnection = async (requestId: string) => {
+    try {
+      const updated = await api.connections.update(requestId, 'accepted');
+      setConnections(prev => prev.map(c => c.id === requestId ? updated : c));
+    } catch (err) {
+      console.error('Failed to accept connection', err);
+    }
+  };
+
+  const handleRejectConnection = async (requestId: string) => {
+    try {
+      const updated = await api.connections.update(requestId, 'rejected');
+      setConnections(prev => prev.map(c => c.id === requestId ? updated : c));
+    } catch (err) {
+      console.error('Failed to reject connection', err);
+    }
+  };
+
+  const handleJoinCommunity = async (communityId: string) => {
+    if (!currentUser) return;
+    const comm = communities.find(c => c.id === communityId);
+    if (!comm) return;
+    const newMemberIds = [...(comm.memberIds as string[]).filter(id => id !== currentUser.id), currentUser.id];
+    try {
+      const updated = await api.communities.update(communityId, { memberIds: newMemberIds });
+      setCommunities(prev => prev.map(c => c.id === communityId ? { ...c, ...updated } : c));
+    } catch (err) {
+      console.error('Failed to join community', err);
+    }
+  };
+
+  const handleLeaveCommunity = async (communityId: string) => {
+    if (!currentUser) return;
+    const comm = communities.find(c => c.id === communityId);
+    if (!comm) return;
+    const newMemberIds = (comm.memberIds as string[]).filter(id => id !== currentUser.id);
+    try {
+      const updated = await api.communities.update(communityId, { memberIds: newMemberIds });
+      setCommunities(prev => prev.map(c => c.id === communityId ? { ...c, ...updated } : c));
+    } catch (err) {
+      console.error('Failed to leave community', err);
+    }
+  };
+
+  const handleCreateCommunity = async (community: { name: string; description: string; icon: string; tags: string[]; category: string }) => {
+    if (!currentUser) return;
+    try {
+      const newComm = await api.communities.create({ ...community, creatorId: currentUser.id });
+      setCommunities(prev => [newComm, ...prev]);
+    } catch (err) {
+      console.error('Failed to create community', err);
+    }
+  };
+
+  const handleAddCommunityResource = async (communityId: string, title: string, link: string, description: string) => {
+    if (!currentUser) return;
+    const comm = communities.find(c => c.id === communityId);
+    if (!comm) return;
+    const newResource = {
+      id: `res-${Date.now()}`,
+      title, link, description,
+      authorId: currentUser.id,
       createdAt: new Date().toISOString()
     };
-    setConnections(prev => [...prev, newRequest]);
+    const newResources = [...(comm.resources || []), newResource];
+    try {
+      const updated = await api.communities.update(communityId, { resources: newResources });
+      setCommunities(prev => prev.map(c => c.id === communityId ? { ...c, ...updated } : c));
+    } catch (err) {
+      console.error('Failed to add resource', err);
+    }
   };
 
-  const handleAcceptConnection = (requestId: string) => {
-    setConnections(prev => prev.map(c => c.id === requestId ? { ...c, status: 'accepted' } : c));
-  };
-
-  const handleRejectConnection = (requestId: string) => {
-    setConnections(prev => prev.map(c => c.id === requestId ? { ...c, status: 'rejected' } : c));
-  };
-
-  // Group hubs association
-  const handleJoinCommunity = (communityId: string) => {
+  const handleAddCommunityThread = async (communityId: string, title: string, content: string) => {
     if (!currentUser) return;
-    setCommunities(prev => prev.map(c => {
-      if (c.id === communityId && !c.memberIds.includes(currentUser.id)) {
-        return { ...c, memberIds: [...c.memberIds, currentUser.id] };
-      }
-      return c;
-    }));
-  };
-
-  const handleLeaveCommunity = (communityId: string) => {
-    if (!currentUser) return;
-    setCommunities(prev => prev.map(c => {
-      if (c.id === communityId) {
-        return { ...c, memberIds: c.memberIds.filter(id => id !== currentUser.id) };
-      }
-      return c;
-    }));
-  };
-
-  const handleCreateCommunity = (community: { name: string; description: string; icon: string; tags: string[]; category: string }) => {
-    if (!currentUser) return;
-    const newCommunity = {
-      ...community,
-      id: `custom-${Date.now()}`,
-      memberIds: [currentUser.id],
-      threads: [],
-      resources: [],
+    const comm = communities.find(c => c.id === communityId);
+    if (!comm) return;
+    const newThread = {
+      id: `thread-${Date.now()}`,
+      title, content,
+      authorId: currentUser.id,
+      createdAt: new Date().toISOString(),
+      replies: []
     };
-    setCommunities(prev => [newCommunity, ...prev]);
+    const newThreads = [...(comm.threads || []), newThread];
+    try {
+      const updated = await api.communities.update(communityId, { threads: newThreads });
+      setCommunities(prev => prev.map(c => c.id === communityId ? { ...c, ...updated } : c));
+    } catch (err) {
+      console.error('Failed to add thread', err);
+    }
   };
 
-  const handleAddCommunityResource = (communityId: string, title: string, link: string, description: string) => {
+  const handleAddThreadReply = async (communityId: string, threadId: string, content: string) => {
     if (!currentUser) return;
-    setCommunities(prev => prev.map(c => {
-      if (c.id === communityId) {
-        const newResource = {
-          id: `res-${Date.now()}`,
-          title,
-          link,
-          description,
-          authorId: currentUser.id,
-          createdAt: new Date().toISOString()
-        };
+    const comm = communities.find(c => c.id === communityId);
+    if (!comm) return;
+    const newThreads = (comm.threads || []).map((t: any) => {
+      if (t.id === threadId) {
         return {
-          ...c,
-          resources: [...(c.resources || []), newResource]
+          ...t,
+          replies: [...t.replies, {
+            id: `rep-${Date.now()}`,
+            authorId: currentUser.id,
+            content,
+            createdAt: new Date().toISOString()
+          }]
         };
       }
-      return c;
-    }));
+      return t;
+    });
+    try {
+      const updated = await api.communities.update(communityId, { threads: newThreads });
+      setCommunities(prev => prev.map(c => c.id === communityId ? { ...c, ...updated } : c));
+    } catch (err) {
+      console.error('Failed to add reply', err);
+    }
   };
 
-  const handleAddCommunityThread = (communityId: string, title: string, content: string) => {
-    if (!currentUser) return;
-    setCommunities(prev => prev.map(c => {
-      if (c.id === communityId) {
-        const newThread = {
-          id: `thread-${Date.now()}`,
-          title,
-          content,
-          authorId: currentUser.id,
-          createdAt: new Date().toISOString(),
-          replies: []
-        };
-        return {
-          ...c,
-          threads: [...(c.threads || []), newThread]
-        };
-      }
-      return c;
-    }));
-  };
-
-  const handleAddThreadReply = (communityId: string, threadId: string, content: string) => {
-    if (!currentUser) return;
-    setCommunities(prev => prev.map(c => {
-      if (c.id === communityId) {
-        return {
-          ...c,
-          threads: (c.threads || []).map(t => {
-            if (t.id === threadId) {
-              const newReply = {
-                id: `rep-${Date.now()}`,
-                authorId: currentUser.id,
-                content,
-                createdAt: new Date().toISOString()
-              };
-              return {
-                ...t,
-                replies: [...t.replies, newReply]
-              };
-            }
-            return t;
-          })
-        };
-      }
-      return c;
-    }));
-  };
-
-  // Post Activity interactions
-  const handleAddPost = (
+  const handleAddPost = async (
     content: string,
     academicTag: string,
     communityId?: string,
@@ -405,20 +327,19 @@ export default function App() {
     feeling?: string
   ) => {
     if (!currentUser) return;
-    const newPost: Post = {
-      id: `post-${Date.now()}`,
-      authorId: currentUser.id,
-      content,
-      likes: [],
-      comments: [],
-      communityId,
-      academicTag,
-      projectTitle,
-      postImage,
-      feeling,
-      createdAt: new Date().toISOString()
-    };
-    setPosts(prev => [newPost, ...prev]);
+    try {
+      const newPost = await api.posts.create({
+        authorId: currentUser.id,
+        content, academicTag,
+        communityId: communityId || null,
+        projectTitle: projectTitle || null,
+        postImage: postImage || null,
+        feeling: feeling || null
+      });
+      setPosts(prev => [newPost, ...prev]);
+    } catch (err) {
+      console.error('Failed to create post', err);
+    }
   };
 
   const handleModalPostSubmit = (e: React.FormEvent) => {
@@ -435,7 +356,6 @@ export default function App() {
       modalSelectedFeeling || undefined
     );
 
-    // Reset standard states
     setModalPostContent('');
     setModalSelectedTag('Startup Pitch 🚀');
     setModalSelectedFeeling('');
@@ -456,151 +376,142 @@ export default function App() {
     }
   };
 
-  const handleAddStory = (content: string, image?: string) => {
+  const handleAddStory = async (content: string, image?: string) => {
     if (!currentUser) return;
-    const newStory: Story = {
-      id: `story-${Date.now()}`,
-      authorId: currentUser.id,
-      image,
-      content,
-      createdAt: new Date().toISOString(),
-      viewedBy: []
-    };
-    setStories(prev => [newStory, ...prev]);
-  };
-
-  const handleReactToStory = (storyId: string, emoji: string) => {
-    setStories(prev => prev.map(s => {
-      if (s.id === storyId) {
-        const currentReactions = s.reactions || {};
-        return {
-          ...s,
-          reactions: {
-            ...currentReactions,
-            [emoji]: (currentReactions[emoji] || 0) + 1
-          }
-        };
-      }
-      return s;
-    }));
-  };
-
-  const handleLikePost = (postId: string) => {
-    if (!currentUser) return;
-    setPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const hasLiked = p.likes.includes(currentUser.id);
-        const updatedLikes = hasLiked
-          ? p.likes.filter(id => id !== currentUser.id)
-          : [...p.likes, currentUser.id];
-        return { ...p, likes: updatedLikes };
-      }
-      return p;
-    }));
-  };
-
-  const handleAddComment = (postId: string, content: string) => {
-    if (!currentUser) return;
-    const newComment: Comment = {
-      id: `comment-${Date.now()}`,
-      postId,
-      authorId: currentUser.id,
-      content,
-      createdAt: new Date().toISOString()
-    };
-    setPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return { ...p, comments: [...p.comments, newComment] };
-      }
-      return p;
-    }));
-  };
-
-  // Direct conversations
-  const handleSendMessage = (receiverId: string, content: string) => {
-    if (!currentUser) return;
-    const newMsg: DirectMessage = {
-      id: `msg-${Date.now()}`,
-      senderId: currentUser.id,
-      receiverId,
-      content,
-      isRead: false,
-      createdAt: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, newMsg]);
-  };
-
-  // Real-time reply simulation wrapper triggered from Messaging component
-  const handleSimulateReply = (partnerId: string, content: string) => {
-    if (!currentUser) return;
-    const newMsg: DirectMessage = {
-      id: `msg-${Date.now()}`,
-      senderId: partnerId,
-      receiverId: currentUser.id,
-      content,
-      isRead: false,
-      createdAt: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, newMsg]);
-  };
-
-  // Safety & Admin operations
-  const handleReportUser = (reportedUserId: string, reason: string, description: string) => {
-    if (!currentUser) return;
-    const newReport: UserReport = {
-      id: `rep-${Date.now()}`,
-      reporterId: currentUser.id,
-      reportedUserId,
-      reason,
-      description,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    };
-    setReports(prev => [newReport, ...prev]);
-  };
-
-  const handleToggleUserSuspension = (userId: string) => {
-    setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, isSuspended: !u.isSuspended } : u));
-    // If we suspend the user we are currently acting as, log out
-    if (currentUser?.id === userId) {
-      alert('This profile is under suspension. Logging you out...');
-      handleLogout();
+    try {
+      const newStory = await api.stories.create(currentUser.id, content, image);
+      setStories(prev => [newStory, ...prev]);
+    } catch (err) {
+      console.error('Failed to create story', err);
     }
   };
 
-  const handleResolveReport = (reportId: string, status: 'suspended' | 'dismissed') => {
-    setReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
+  const handleReactToStory = async (storyId: string, emoji: string) => {
+    try {
+      const updated = await api.stories.react(storyId, emoji);
+      setStories(prev => prev.map(s => s.id === storyId ? { ...s, reactions: updated.reactions } : s));
+    } catch (err) {
+      console.error('Failed to react to story', err);
+    }
   };
 
-  const handleDeletePost = (postId: string) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
+  const handleLikePost = async (postId: string) => {
+    if (!currentUser) return;
+    try {
+      const updated = await api.posts.like(postId, currentUser.id);
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: updated.likes } : p));
+    } catch (err) {
+      console.error('Failed to like post', err);
+    }
   };
 
-  const clearSandboxStorage = () => {
-    localStorage.clear();
-    setAllUsers(INITIAL_USERS);
-    setPosts(INITIAL_POSTS);
-    setConnections(INITIAL_CONNECTIONS);
-    setMessages(INITIAL_MESSAGES);
-    setCommunities(ALL_PREDEFINED_CHAPTERS);
-    setStories(INITIAL_STORIES);
-    setReports(MOCK_REPORTS);
-    alert('Academic ledger reset successfully to campus seed defaults!');
+  const handleAddComment = async (postId: string, content: string) => {
+    if (!currentUser) return;
+    try {
+      const newComment = await api.posts.addComment(postId, currentUser.id, content);
+      setPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+          return { ...p, comments: [...p.comments, newComment] };
+        }
+        return p;
+      }));
+    } catch (err) {
+      console.error('Failed to add comment', err);
+    }
   };
 
-  // Auth interceptor helper
+  const handleSendMessage = async (receiverId: string, content: string) => {
+    if (!currentUser) return;
+    try {
+      const newMsg = await api.messages.send(currentUser.id, receiverId, content);
+      setMessages(prev => [...prev, newMsg]);
+    } catch (err) {
+      console.error('Failed to send message', err);
+    }
+  };
+
+  const handleSimulateReply = async (partnerId: string, content: string) => {
+    if (!currentUser) return;
+    try {
+      const newMsg = await api.messages.send(partnerId, currentUser.id, content);
+      setMessages(prev => [...prev, newMsg]);
+    } catch (err) {
+      console.error('Failed to simulate reply', err);
+    }
+  };
+
+  const handleReportUser = async (reportedUserId: string, reason: string, description: string) => {
+    if (!currentUser) return;
+    try {
+      const newReport = await api.reports.create({
+        reporterId: currentUser.id,
+        reportedUserId,
+        reason,
+        description
+      });
+      setReports(prev => [newReport, ...prev]);
+    } catch (err) {
+      console.error('Failed to report user', err);
+    }
+  };
+
+  const handleToggleUserSuspension = async (userId: string) => {
+    try {
+      const updated = await api.users.toggleSuspend(userId);
+      setAllUsers(prev => prev.map(u => u.id === userId ? updated : u));
+      if (currentUser?.id === userId) {
+        alert('This profile is under suspension. Logging you out...');
+        handleLogout();
+      }
+    } catch (err) {
+      console.error('Failed to toggle suspension', err);
+    }
+  };
+
+  const handleResolveReport = async (reportId: string, status: 'suspended' | 'dismissed') => {
+    try {
+      const updated = await api.reports.update(reportId, status);
+      setReports(prev => prev.map(r => r.id === reportId ? updated : r));
+    } catch (err) {
+      console.error('Failed to resolve report', err);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await api.posts.delete(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    } catch (err) {
+      console.error('Failed to delete post', err);
+    }
+  };
+
+  const handleRegisterEvent = (eventId: string) => {
+    if (!registeredEvents.includes(eventId)) {
+      setRegisteredEvents(prev => [...prev, eventId]);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-[#09090C] text-white' : 'bg-neutral-50 text-slate-900'}`}>
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm font-mono text-slate-400">Connecting to database...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return (
       <AuthSection
         onLogin={handleLogin}
-        onRegister={handleRegister}
-        allUsers={allUsers}
         darkMode={darkMode}
       />
     );
   }
 
-  // Active Direct message unread count for sidebar indicator badge
   const totalUnreadMessages = messages.filter(
     m => m.receiverId === currentUser.id && !m.isRead
   ).length;
@@ -608,7 +519,6 @@ export default function App() {
   return (
     <div className={`min-h-screen w-full overflow-x-hidden flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
-      {/* Main Top Header Block of Editorial Mockup */}
       <header className="border-b border-neutral-200 dark:border-white/10 px-6 lg:px-8 py-3.5 flex items-center justify-between transition-all sticky top-0 z-30 backdrop-blur-md" style={{ backgroundColor: 'var(--t-header)' }}>
         <div className="flex items-center space-x-4 lg:space-x-8">
           <h1 className="text-xl lg:text-2xl font-serif italic font-black tracking-tight uppercase select-none bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
@@ -622,7 +532,6 @@ export default function App() {
         </div>
         
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Quick theme & logout actions displayed inside header on mobile/tablet viewports */}
           <button
             onClick={() => {
               const keys = Object.keys(THEMES) as ThemeName[];
@@ -644,10 +553,9 @@ export default function App() {
 
           <div className="hidden sm:flex bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 text-[11px] font-mono items-center font-bold">
             <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
-            Verified Accs Only
+            Live Database
           </div>
 
-          {/* Persistent Premium Header Post Creator Button */}
           {!currentUser.isSuspended && (
             <button
               id="header-post-trigger"
@@ -670,7 +578,6 @@ export default function App() {
 
       <div className="flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4">
         
-        {/* Navigation Sidebar Panel */}
         <aside className="w-full md:w-60 shrink-0 space-y-4">
           <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className="hidden md:flex items-center gap-2 mb-4 pb-2 border-b border-neutral-100 dark:border-white/10">
@@ -757,7 +664,6 @@ export default function App() {
             </nav>
 
             <div className="hidden md:block mt-6 pt-4 border-t border-neutral-150 dark:border-white/10 space-y-3">
-              {/* Theme Picker */}
               <div className="px-1">
                 <div className="flex items-center gap-2 mb-2.5">
                   <Palette size={12} className="text-slate-400" />
@@ -798,7 +704,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Profile Quick Summary Footer card */}
           <div className="hidden md:flex p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm text-left items-center gap-3" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 overflow-hidden`}>
               <Avatar avatar={currentUser.avatar} />
@@ -810,7 +715,6 @@ export default function App() {
           </div>
         </aside>
 
-        {/* Dynamic Workspace Container */}
         <main className="flex-1 min-w-0 space-y-6">
           {activeView === 'dashboard' && (
             <DashboardSection
@@ -922,84 +826,11 @@ export default function App() {
 
       </div>
 
-      {/* Floating Demo Portal Switcher (Hidden from header, available quietly in bottom-right) */}
-      <div className="fixed bottom-5 right-5 z-50 font-sans text-left">
-        {showDemoPortal && (
-          <div className={`p-4 rounded-xl border mb-3 w-64 shadow-xl transition-all duration-200 text-xs ${darkMode ? 'bg-[#121217] border-white/10 text-[#F9F7F2]' : 'bg-white border-neutral-200 text-[#1A1A1A]'}`}>
-            <div className="flex items-center justify-between border-b pb-2 mb-2 border-neutral-200/80 dark:border-white/10">
-              <span className="font-extrabold uppercase tracking-wider text-[9px] text-slate-400 flex items-center gap-1">
-                <Sparkles size={11} className="text-indigo-400 animate-pulse" /> Sandbox Hub
-              </span>
-              <span className="text-[8px] font-mono opacity-50">v1.2</span>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 mb-2 uppercase tracking-wide">Select test account:</p>
-              <button
-                id="btn-switch-chloe"
-                onClick={() => {
-                  handleSwapAccount('user-2');
-                  setShowDemoPortal(false);
-                }}
-                className={`w-full py-1.5 px-2.5 rounded-lg text-left font-semibold transition-all flex items-center justify-between ${currentUser.id === 'user-2' ? 'bg-indigo-505 text-indigo-500 bg-indigo-500/10' : 'hover:bg-neutral-100 dark:hover:bg-white/5 opacity-80 hover:opacity-100'}`}
-              >
-                <span>Chloe (MIT CS)</span>
-                {currentUser.id === 'user-2' && <span className="text-[12px] text-indigo-500">●</span>}
-              </button>
-              <button
-                id="btn-switch-aravind"
-                onClick={() => {
-                  handleSwapAccount('user-1');
-                  setShowDemoPortal(false);
-                }}
-                className={`w-full py-1.5 px-2.5 rounded-lg text-left font-semibold transition-all flex items-center justify-between ${currentUser.id === 'user-1' ? 'bg-indigo-505 text-indigo-500 bg-indigo-500/10' : 'hover:bg-neutral-100 dark:hover:bg-white/5 opacity-80 hover:opacity-100'}`}
-              >
-                <span>Aravind (IIT CS)</span>
-                {currentUser.id === 'user-1' && <span className="text-[12px] text-indigo-500">●</span>}
-              </button>
-              <button
-                id="btn-switch-sarah"
-                onClick={() => {
-                  handleSwapAccount('admin-1');
-                  setShowDemoPortal(false);
-                }}
-                className={`w-full py-1.5 px-2.5 rounded-lg text-left font-semibold transition-all flex items-center justify-between ${currentUser.id === 'admin-1' ? 'bg-rose-505 text-rose-500 bg-rose-500/10' : 'hover:bg-neutral-100 dark:hover:bg-white/5 text-rose-500 opacity-80 hover:opacity-100'}`}
-              >
-                <span>Prof. Sarah (Admin)</span>
-                {currentUser.id === 'admin-1' && <span className="text-[12px] text-rose-500">●</span>}
-              </button>
-            </div>
-            
-            <div className="border-t border-dashed mt-3 pt-2.5 border-neutral-200 dark:border-white/10 flex items-center justify-between">
-              <span className="text-[8px] text-slate-400 font-mono">Ledger Database:</span>
-              <button
-                id="btn-clear-ledger"
-                onClick={() => {
-                  clearSandboxStorage();
-                  setShowDemoPortal(false);
-                }}
-                className="py-1 px-2.5 rounded bg-neutral-900 text-white dark:bg-white dark:text-zinc-950 font-bold uppercase text-[9px] hover:opacity-90 transition-all font-mono"
-              >
-                Reset Default
-              </button>
-            </div>
-          </div>
-        )}
-        <button
-          id="btn-toggle-demo-portal"
-          onClick={() => setShowDemoPortal(!showDemoPortal)}
-          className={`flex items-center gap-1.5 py-2 px-3.5 rounded-full shadow-lg border text-xs font-bold transition-all hover:scale-[1.03] active:scale-[0.97] cursor-pointer ${showDemoPortal ? 'bg-indigo-500 border-transparent text-white' : (darkMode ? 'bg-[#121217] border-white/10 text-[#F9F7F2] hover:bg-[#1b1b22]' : 'bg-white border-neutral-250 text-[#1A1A1A] hover:bg-[#F4F4F6]')}`}
-        >
-          <Sparkles size={13} className={showDemoPortal ? 'animate-none' : 'animate-pulse text-indigo-500'} />
-          <span>Demo Hub</span>
-        </button>
-      </div>
-
-      {/* Premium Instagram-Style Share Overlay Modal */}
+      {/* New Post Modal */}
       {showNewPostModal && (
         <div className="fixed inset-0 bg-neutral-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all animate-fade-in font-sans">
           <div className={`relative w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl border border-neutral-200/90 dark:border-white/10 flex flex-col md:flex-row max-h-[90vh] md:h-[620px] transition-all duration-300 ${darkMode ? 'bg-[#0E0E12] text-[#F9F7F2]' : 'bg-white text-slate-900'}`}>
             
-            {/* Left Box: Creative Instagram-Style Live Preview */}
             <div className="w-full md:w-5/12 bg-neutral-950 text-white flex flex-col justify-between p-5 relative border-b md:border-b-0 md:border-r border-neutral-200/10 shrink-0">
               <div className="absolute inset-0 bg-radial-gradient opacity-15 pointer-events-none"></div>
               
@@ -1016,7 +847,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Profile row */}
                 <div className="flex items-center gap-2.5">
                   <div className="p-[1.5px] rounded-full bg-gradient-to-tr from-rose-500 via-amber-500 to-indigo-600">
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-[#0E0E12] border border-white/10 overflow-hidden animate-none">
@@ -1038,7 +868,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Optional Project Showcase Ribbon */}
                 {modalProjectTitle && (
                   <div className="mt-3 bg-gradient-to-r from-indigo-500/10 via-pink-500/10 to-indigo-500/10 border border-indigo-500/30 rounded-lg p-2">
                     <div className="text-[7.5px] font-mono uppercase text-indigo-400 font-extrabold tracking-widest">🚀 Project showcase</div>
@@ -1046,13 +875,11 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Body Content preview */}
                 <p className="mt-3.5 text-[11px] font-sans leading-relaxed text-neutral-350 max-h-24 overflow-y-auto no-scrollbar break-words italic">
                   "{modalPostContent || 'Type something beautiful to preview your update in real-time on the campus timeline...'}"
                 </p>
               </div>
 
-              {/* Attached Image Frame preview */}
               <div className="mt-4 flex-1 min-h-[120px] md:min-h-0 bg-[#060608] rounded-2xl border border-white/5 overflow-hidden flex items-center justify-center relative">
                 {modalPostImage ? (
                   <>
@@ -1086,10 +913,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Box: Form Section */}
             <form onSubmit={handleModalPostSubmit} className="flex-1 p-6 flex flex-col justify-between overflow-y-auto min-h-0">
               
-              {/* Header / Dismiss */}
               <div className="flex items-center justify-between pb-3.5 border-b border-neutral-200/80 dark:border-white/10">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400">
@@ -1109,10 +934,8 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Fields */}
               <div className="py-4 space-y-4 flex-1 overflow-y-auto pr-1 no-scrollbar text-xs">
                 
-                {/* Content Input Box */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">What are you building or looking for? <span className="text-rose-500">*</span></label>
                   <textarea
@@ -1125,7 +948,6 @@ export default function App() {
                   />
                 </div>
 
-                {/* Vibe Feeling Ticker Status */}
                 <div className="space-y-1.5">
                   <span className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500 block">Current builder status — what mode are you in?</span>
                   <div className="flex flex-wrap gap-1.5">
@@ -1153,11 +975,9 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 2-Column Selectors */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Category Tag */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">Academic / Lifestyle Category</label>
+                    <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">Academic Category</label>
                     <select
                       value={modalSelectedTag}
                       onChange={(e) => setModalSelectedTag(e.target.value)}
@@ -1169,41 +989,37 @@ export default function App() {
                     </select>
                   </div>
 
-                  {/* Post to Community Direct Filter */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">Post directly to Community</label>
+                    <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">Post to Community</label>
                     <select
                       value={modalSelectedCommunity}
                       onChange={(e) => setModalSelectedCommunity(e.target.value)}
                       className={`w-full p-2.5 rounded-xl border focus:ring-1 focus:ring-indigo-500 text-xs focus:outline-none cursor-pointer transition-all ${darkMode ? 'bg-[#09090C] border-white/5 text-slate-100' : 'bg-neutral-50 border-neutral-200 text-slate-900'}`}
                     >
-                      <option value="">General Feed Ticker</option>
+                      <option value="">General Feed</option>
                       {communities.map(comm => (
-                        <option key={comm.id} value={comm.id}>{comm.name} ({comm.type})</option>
+                        <option key={comm.id} value={comm.id}>{comm.name}</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
-                {/* Optional Startup Showcase Title */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">Startup Showcase / Pitch Project Title (Optional)</label>
+                  <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">Project / Pitch Title (Optional)</label>
                   <input
                     type="text"
-                    placeholder="e.g. EcoDrone Autonomous Pitch Seed, placement guide kit..."
+                    placeholder="e.g. EcoDrone Autonomous Pitch Seed..."
                     value={modalProjectTitle}
                     onChange={(e) => setModalProjectTitle(e.target.value)}
                     className={`w-full p-2.5 rounded-xl border focus:ring-1 focus:ring-indigo-500 text-xs focus:outline-none transition-all ${darkMode ? 'bg-[#09090C] border-white/5 text-slate-100' : 'bg-neutral-50 border-neutral-200 text-slate-900'}`}
                   />
                 </div>
 
-                {/* Media Attachment Row */}
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500 block">Attach Image Story / Startup Blueprint Photo</label>
+                  <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500 block">Attach Image (Optional)</label>
                   
-                  {/* Option A: Unsplash stock presets */}
                   <div className="space-y-1">
-                    <span className="text-[8.5px] text-slate-400 dark:text-zinc-500 block">Pick an aesthetic stock theme:</span>
+                    <span className="text-[8.5px] text-slate-400 dark:text-zinc-500 block">Pick a stock theme:</span>
                     <div className="flex gap-2">
                       {STOCK_PRESETS.map((stock) => (
                         <button
@@ -1219,7 +1035,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Option B: Direct URL / File Upload */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                     <div>
                       <input
@@ -1242,7 +1057,7 @@ export default function App() {
                         htmlFor="modal-image-file-input"
                         className={`w-full p-2.5 rounded-xl border border-dashed text-center block text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-neutral-150 dark:hover:bg-zinc-850 ${darkMode ? 'border-zinc-800 text-[#F9F7F2]' : 'border-neutral-300 text-slate-700'}`}
                       >
-                        Upload Custom Photo
+                        Upload Photo
                       </label>
                     </div>
                   </div>
@@ -1250,7 +1065,6 @@ export default function App() {
 
               </div>
 
-              {/* Submit / Action button row */}
               <div className="pt-4 border-t border-neutral-200/80 dark:border-white/10 flex items-center justify-end gap-3 pointer-events-auto">
                 <button
                   type="button"
@@ -1276,36 +1090,29 @@ export default function App() {
         </div>
       )}
 
-      {/* CENTRALIZED PEER STUDENT CARD & TIMELINE PROFILE OVERLAY */}
+      {/* Peer Profile Overlay Modal */}
       {viewingUserProfileId && (() => {
         const selectedUser = allUsers.find(u => u.id === viewingUserProfileId);
         if (!selectedUser) return null;
 
-        // Collect all posts authored by this selected user
-        const sharedPosts = posts.filter(p => p.authorId === selectedUser.id && !p.isSuspended);
-
-        // Check relationship status: accepted, pending, etc.
+        const sharedPosts = posts.filter(p => p.authorId === selectedUser.id);
         const currentRelations = connections.filter(
           c => (c.senderId === currentUser.id && c.receiverId === selectedUser.id) ||
                (c.senderId === selectedUser.id && c.receiverId === currentUser.id)
         );
         const activeRelation = currentRelations[0];
-
-        // Calculate overlap tags: shared interests or skills
-        const sharedInterests = selectedUser.interests.filter(tag => currentUser.interests.includes(tag));
-        const sharedSkills = selectedUser.skills.filter(tag => currentUser.skills.includes(tag));
+        const sharedInterests = (selectedUser.interests as string[]).filter(tag => (currentUser.interests as string[]).includes(tag));
+        const sharedSkills = (selectedUser.skills as string[]).filter(tag => (currentUser.skills as string[]).includes(tag));
         const overlapCount = sharedInterests.length + sharedSkills.length;
 
-        // Quick connect submit
         const handleQuickConnect = () => {
-          handleSendConnectionRequest(selectedUser.id, 'Friendship', `Hi ${selectedUser.fullName}! I saw your card on the timeline and wanted to connect.`);
+          handleSendConnectionRequest(selectedUser.id, 'Friendship', `Hi ${selectedUser.fullName}! I saw your profile and wanted to connect.`);
         };
 
-        // Quick message action
         const handleStartChat = () => {
           setPreSelectedMsgUserId(selectedUser.id);
-          setViewingUserProfileId(null); // Close modal
-          setActiveView('messages'); // navigate
+          setViewingUserProfileId(null);
+          setActiveView('messages');
         };
 
         return (
@@ -1314,12 +1121,10 @@ export default function App() {
               darkMode ? 'bg-[#121217] text-slate-100' : 'bg-white text-slate-900'
             }`}>
               
-              {/* Header Cover Bar with visual design */}
               <div className="h-28 shrink-0 bg-gradient-to-r from-indigo-505 via-indigo-600 to-pink-500 relative flex items-end p-4">
                 <button
                   onClick={() => setViewingUserProfileId(null)}
                   className="absolute top-4 right-4 p-1.5 rounded-full bg-black/30 hover:bg-black/50 text-white transition-all cursor-pointer border-0"
-                  title="Close Profile Explorer"
                 >
                   <X size={16} />
                 </button>
@@ -1330,7 +1135,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Profile Bio Details */}
               <div className="pt-10 px-6 pb-4 shrink-0 border-b border-dashed border-neutral-150 dark:border-white/5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
@@ -1338,7 +1142,7 @@ export default function App() {
                       <span>{selectedUser.fullName}</span>
                       {selectedUser.isVerified && (
                         <span className="py-0.5 px-2 rounded bg-indigo-500/15 text-indigo-500 dark:bg-indigo-500/25 text-[9px] font-mono font-bold uppercase tracking-wide">
-                          VERIFIED PEER
+                          VERIFIED
                         </span>
                       )}
                     </h3>
@@ -1346,11 +1150,10 @@ export default function App() {
                       {selectedUser.college} • {selectedUser.branch}
                     </p>
                     <p className="text-[10px] text-slate-400 font-mono">
-                      Academic Sector: Year {selectedUser.year} Student
+                      Year {selectedUser.year} Student
                     </p>
                   </div>
 
-                  {/* Connect and Quick Chat Action Buttons inside Card */}
                   <div className="flex flex-wrap items-center gap-2">
                     {selectedUser.id !== currentUser.id && (
                       <>
@@ -1360,14 +1163,14 @@ export default function App() {
                               ? 'bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/15' 
                               : 'bg-amber-500/10 text-amber-500 dark:bg-amber-500/15'
                           }`}>
-                            {activeRelation.status === 'accepted' ? 'Match Verified' : 'Connection Pending'}
+                            {activeRelation.status === 'accepted' ? 'Connected' : 'Pending'}
                           </span>
                         ) : (
                           <button
                             onClick={handleQuickConnect}
                             className="py-1.5 px-4 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold uppercase tracking-wider text-[10px] border-0 cursor-pointer transition-colors shadow-xs"
                           >
-                            Send Connect Request
+                            Connect
                           </button>
                         )}
 
@@ -1375,23 +1178,21 @@ export default function App() {
                           onClick={handleStartChat}
                           className="py-1.5 px-4 rounded-full bg-pink-500 hover:bg-pink-600 text-white font-bold uppercase tracking-wider text-[10px] border-0 cursor-pointer transition-colors shadow-xs"
                         >
-                          Message {selectedUser.fullName.split(' ')[0]}
+                          Message
                         </button>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Match overlap info chip */}
                 {selectedUser.id !== currentUser.id && overlapCount > 0 && (
                   <div className="mt-3.5 inline-flex items-center gap-1.5 py-1 px-3 rounded-lg border border-indigo-400/20 bg-indigo-500/[0.03] dark:bg-indigo-500/[0.05] text-[10px] font-mono uppercase font-bold text-indigo-600 dark:text-indigo-400">
                     <Sparkles size={11} className="text-indigo-500" />
-                    <span>Academic Overlap Index: Match on {overlapCount} shared dimension{overlapCount > 1 ? 's' : ''} ({[...sharedInterests, ...sharedSkills].join(', ')})</span>
+                    <span>{overlapCount} shared dimension{overlapCount > 1 ? 's' : ''}: {[...sharedInterests, ...sharedSkills].join(', ')}</span>
                   </div>
                 )}
               </div>
 
-              {/* TABS BUTTONS BAR */}
               <div className="flex border-b border-neutral-100 dark:border-white/5 bg-slate-50/20 dark:bg-zinc-950/20 shrink-0">
                 <button
                   type="button"
@@ -1402,7 +1203,7 @@ export default function App() {
                       : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  Student Card Info 📑
+                  Profile 📑
                 </button>
                 <button
                   type="button"
@@ -1413,253 +1214,90 @@ export default function App() {
                       : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  What They Shared 📝 ({sharedPosts.length})
+                  Posts ({sharedPosts.length}) 📢
                 </button>
               </div>
 
-              {/* SCROLLABLE SCENE CONTENT */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-5 min-h-0">
-                {profileActiveTab === 'card' ? (
-                  <div className="space-y-5">
-                    
-                    {/* Bio */}
-                    <div className="space-y-1.5">
-                      <h4 className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Institutional Biography</h4>
-                      <p className={`text-xs leading-relaxed p-4 rounded-2xl border border-neutral-100 dark:border-white/5 ${
-                        darkMode ? 'bg-zinc-950/40 text-slate-300' : 'bg-slate-50/40 text-slate-700'
-                      }`}>
-                        {selectedUser.aboutMe || "No institutional biography recorded yet."}
-                      </p>
-                    </div>
-
-                    {/* Interests Chips */}
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Target Tags & Core Focus</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedUser.interests.length > 0 ? (
-                          (profileInterestsExpanded ? selectedUser.interests : selectedUser.interests.slice(0, 3)).map(item => {
-                            const isShared = currentUser.interests.includes(item) && selectedUser.id !== currentUser.id;
-                            return (
-                              <span 
-                                key={item} 
-                                className={`px-3 py-1 rounded-lg text-xs font-medium border ${
-                                  isShared 
-                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/30' 
-                                    : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/10'
-                                }`}
-                              >
-                                {item} {isShared && <Sparkles size={10} className="text-indigo-505 shrink-0" />}
-                              </span>
-                            );
-                          })
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">No academic interests cataloged.</span>
-                        )}
-                        {selectedUser.interests.length > 3 && (
-                          <button
-                            onClick={() => setProfileInterestsExpanded(!profileInterestsExpanded)}
-                            className="px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/20 bg-indigo-500/5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 transition-colors cursor-pointer select-none"
-                          >
-                            {profileInterestsExpanded ? 'Show Less' : `+ ${selectedUser.interests.length - 3} More`}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Skills Chips */}
-                    <div className="space-y-2">
-                       <h4 className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Hard Skills & Focus Fields</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedUser.skills.length > 0 ? (
-                          selectedUser.skills.map(item => {
-                            const isShared = currentUser.skills.includes(item) && selectedUser.id !== currentUser.id;
-                            return (
-                              <span 
-                                key={item} 
-                                className={`px-3 py-1 rounded-lg text-xs font-medium border ${
-                                  isShared 
-                                    ? 'bg-rose-500/15 text-rose-700 dark:text-rose-350 border-rose-500/30 ring-1 ring-rose-500/10 flex items-center gap-1 font-bold' 
-                                    : 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/10'
-                                }`}
-                              >
-                                {item} {isShared && <Sparkles size={10} className="text-rose-500 shrink-0" />}
-                              </span>
-                            );
-                          })
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">No hard skills selected yet.</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Seeking Chips */}
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Seeking Campus Alliances</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedUser.lookingFor.length > 0 ? (
-                          (profileLookingForExpanded ? selectedUser.lookingFor : selectedUser.lookingFor.slice(0, 3)).map(item => (
-                            <span key={item} className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-medium border border-emerald-500/10">
-                              {item}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">No seeking tags established.</span>
-                        )}
-                        {selectedUser.lookingFor.length > 3 && (
-                          <button
-                            onClick={() => setProfileLookingForExpanded(!profileLookingForExpanded)}
-                            className="px-3 py-1 rounded-lg text-xs font-bold border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer select-none"
-                          >
-                            {profileLookingForExpanded ? 'Show Less' : `+ ${selectedUser.lookingFor.length - 3} More`}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Privacy restricted item */}
-                    {selectedUser.privacySettings.showEmail ? (
-                      <div className="p-3.5 rounded-xl border border-dashed border-neutral-200 dark:border-white/10 flex items-center justify-between text-xs">
-                        <span className="font-mono text-slate-455">Registered Student Email Coordinates:</span>
-                        <span className="font-extrabold font-mono text-indigo-600 dark:text-indigo-400">{selectedUser.email}</span>
-                      </div>
-                    ) : (
-                      <div className="p-3.5 rounded-xl border border-dashed border-neutral-100 dark:border-white/5 text-center text-[10px] font-mono text-slate-400 italic bg-neutral-50/15">
-                        ⚠️ Student card email is set to incognito. Submit a connection request to chat!
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {profileActiveTab === 'card' && (
+                  <div className="p-6 space-y-5 text-xs">
+                    {selectedUser.aboutMe && (
+                      <div>
+                        <h4 className="text-[9px] uppercase tracking-widest font-extrabold text-slate-400 mb-2">About</h4>
+                        <p className="leading-relaxed text-xs">{selectedUser.aboutMe}</p>
                       </div>
                     )}
 
+                    {(selectedUser.interests as string[]).length > 0 && (
+                      <div>
+                        <h4 className="text-[9px] uppercase tracking-widest font-extrabold text-slate-400 mb-2">Interests</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(selectedUser.interests as string[]).map(interest => (
+                            <span key={interest} className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${sharedInterests.includes(interest) ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-400/20' : darkMode ? 'bg-white/5 text-slate-300' : 'bg-neutral-100 text-slate-700'}`}>
+                              {interest} {sharedInterests.includes(interest) && '✓'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(selectedUser.skills as string[]).length > 0 && (
+                      <div>
+                        <h4 className="text-[9px] uppercase tracking-widest font-extrabold text-slate-400 mb-2">Skills</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(selectedUser.skills as string[]).map(skill => (
+                            <span key={skill} className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${sharedSkills.includes(skill) ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-400/20' : darkMode ? 'bg-white/5 text-slate-300' : 'bg-neutral-100 text-slate-700'}`}>
+                              {skill} {sharedSkills.includes(skill) && '✓'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(selectedUser.lookingFor as string[]).length > 0 && (
+                      <div>
+                        <h4 className="text-[9px] uppercase tracking-widest font-extrabold text-slate-400 mb-2">Looking For</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(selectedUser.lookingFor as string[]).map(item => (
+                            <span key={item} className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${darkMode ? 'bg-pink-500/10 text-pink-400' : 'bg-pink-50 text-pink-600 border border-pink-200/50'}`}>
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="space-y-4">
+                )}
+
+                {profileActiveTab === 'shares' && (
+                  <div className="p-4 space-y-3">
                     {sharedPosts.length === 0 ? (
-                      <div className="p-8 text-center text-xs text-slate-400 space-y-1">
-                        <p className="font-bold">No dispatches found.</p>
-                        <p>{selectedUser.fullName.split(' ')[0]} has not shared any updates or code projects yet.</p>
+                      <div className="text-center py-12 text-slate-400">
+                        <p className="text-sm">No posts yet</p>
                       </div>
                     ) : (
-                      sharedPosts.map(post => {
-                        const hasLiked = post.likes.includes(currentUser.id);
-                        return (
-                          <div key={post.id} className={`p-4 rounded-xl border border-neutral-200/60 dark:border-white/5 text-xs text-left space-y-3.5 ${
-                            darkMode ? 'bg-zinc-950/40 text-slate-300' : 'bg-slate-50/40 text-slate-800'
-                          }`}>
-                            
-                            {/* Card sub header */}
-                            <div className="flex justify-between items-center text-[10px] border-b border-neutral-150/10 dark:border-white/5 pb-2">
-                              <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold uppercase text-[8px] font-mono">
-                                {post.academicTag}
-                              </span>
-                              <span className="font-mono text-slate-400">
-                                {new Date(post.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                              </span>
-                            </div>
-
-                            {/* Content */}
-                            {post.projectTitle && (
-                              <h5 className="font-sans font-black tracking-tight text-xs pr-1 border-l-4 border-pink-500 pl-2 text-slate-800 dark:text-slate-100">
-                                Project Dispatch: {post.projectTitle}
-                              </h5>
-                            )}
-
-                            <p className="leading-relaxed whitespace-pre-wrap">{post.content}</p>
-
-                            {post.postImage && (
-                              <div className="w-full max-h-56 rounded-lg overflow-hidden border border-neutral-200 dark:border-white/15">
-                                <img src={post.postImage} alt="Post dispatch media" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                              </div>
-                            )}
-
-                            {/* Likes comment summary stats and quick triggers */}
-                            <div className="flex items-center justify-between border-t border-b border-neutral-150/10 dark:border-white/5 py-2">
-                              
-                              <button
-                                type="button"
-                                onClick={() => handleLikePost(post.id)}
-                                className={`flex items-center gap-1.5 py-0.5 px-2 bg-transparent border-0 cursor-pointer ${
-                                  hasLiked ? 'text-rose-500 font-bold' : 'text-slate-400 hover:text-rose-500'
-                                }`}
-                              >
-                                <Heart size={14} fill={hasLiked ? 'currentColor' : 'none'} />
-                                <span className="text-[10px] font-mono font-bold">{post.likes.length} Likes</span>
-                              </button>
-
-                              <div className="flex items-center gap-1.5 text-slate-400">
-                                <MessageSquare size={14} />
-                                <span className="text-[10px] font-mono font-bold">{post.comments.length} Comments</span>
-                              </div>
-
-                            </div>
-
-                            {/* Comments Scroller inside model */}
-                            {post.comments.length > 0 && (
-                              <div className="space-y-1.5 max-h-32 overflow-y-auto no-scrollbar pt-1">
-                                {post.comments.map(c => {
-                                  const cAuthor = allUsers.find(u => u.id === c.authorId);
-                                  if (!cAuthor || cAuthor.isSuspended) return null;
-                                  return (
-                                    <div key={c.id} className="text-[10.5px] leading-relaxed">
-                                      <span className="font-extrabold text-[#7485A5] mr-1 truncate">{cAuthor.fullName.split(' ')[0]}:</span>
-                                      <span className="opacity-80">{c.content}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            {/* Quick Inline Comment Composer */}
-                            <form
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                const form = e.currentTarget;
-                                const input = form.elements.namedItem('replyText') as HTMLInputElement;
-                                if (input && input.value.trim()) {
-                                  handleAddComment(post.id, input.value.trim());
-                                  input.value = '';
-                                }
-                              }}
-                              className="flex gap-2 items-center"
-                            >
-                              <input
-                                name="replyText"
-                                type="text"
-                                placeholder={`Acknowledge this dispatch...`}
-                                className={`flex-1 px-3 py-1.5 rounded-xl text-[11px] focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                                  darkMode ? 'bg-black/40 border border-white/5 text-white' : 'bg-neutral-100/50 border border-neutral-200 text-slate-800'
-                                }`}
-                              />
-                              <button
-                                type="submit"
-                                className="py-1 px-3 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-[10px] uppercase border-0 cursor-pointer transition-colors shrink-0"
-                              >
-                                Reply
-                              </button>
-                            </form>
-
+                      sharedPosts.map(post => (
+                        <div key={post.id} className={`p-4 rounded-xl border text-xs ${darkMode ? 'bg-white/3 border-white/5' : 'bg-neutral-50 border-neutral-200'}`}>
+                          {post.projectTitle && (
+                            <div className="text-[9px] font-mono text-indigo-500 uppercase font-bold mb-1">{post.projectTitle}</div>
+                          )}
+                          <p className="leading-relaxed">{post.content}</p>
+                          <div className="flex items-center gap-3 mt-2 text-[9px] text-slate-400">
+                            <span className="flex items-center gap-1"><Heart size={10} /> {(post.likes as string[]).length}</span>
+                            <span>{post.academicTag}</span>
+                            <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                           </div>
-                        );
-                      })
+                        </div>
+                      ))
                     )}
                   </div>
                 )}
               </div>
-
-              {/* Close Bottom Area */}
-              <div className="p-4 border-t border-neutral-150 dark:border-white/5 flex items-center justify-end font-sans shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setViewingUserProfileId(null)}
-                  className={`px-5 py-2 text-[10px] font-extrabold uppercase tracking-wide rounded-full border-0 cursor-pointer transition-colors ${
-                    darkMode ? 'bg-zinc-800 text-slate-200' : 'bg-neutral-100 text-slate-800'
-                  }`}
-                >
-                  Close Explorer
-                </button>
-              </div>
-
             </div>
           </div>
         );
       })()}
+
     </div>
   );
 }

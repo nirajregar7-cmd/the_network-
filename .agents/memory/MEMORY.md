@@ -1,0 +1,1 @@
+- [Neon DB + Express backend](neon-backend.md) — full-stack migration: Vite frontend proxies /api to Express on port 3001; Drizzle ORM manages all tables; no more localStorage/mock data.
