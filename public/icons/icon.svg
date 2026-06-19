@@ -1,39 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4338CA"/>
-      <stop offset="50%" style="stop-color:#6366F1"/>
-      <stop offset="100%" style="stop-color:#8B5CF6"/>
+      <stop offset="0%" style="stop-color:#1a0533"/>
+      <stop offset="40%" style="stop-color:#3730a3"/>
+      <stop offset="100%" style="stop-color:#6d28d9"/>
     </linearGradient>
-    <radialGradient id="glow" cx="35%" cy="30%" r="70%">
-      <stop offset="0%" style="stop-color:rgba(255,255,255,0.2)"/>
+    <radialGradient id="glow" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.15)"/>
       <stop offset="100%" style="stop-color:rgba(0,0,0,0)"/>
     </radialGradient>
-    <clipPath id="clip">
-      <rect width="512" height="512" rx="113" ry="113"/>
-    </clipPath>
   </defs>
+  <rect width="512" height="512" rx="113" ry="113" fill="#000000"/>
+  <rect width="512" height="512" rx="113" ry="113" fill="url(#bg)" opacity="0.92"/>
+  <rect width="512" height="512" rx="113" ry="113" fill="url(#glow)"/>
 
-  <!-- Background -->
-  <rect width="512" height="512" rx="113" ry="113" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="113" ry="113" fill="url(#glow)" clip-path="url(#clip)"/>
+  <line x1="180.42880000000002" y1="348.3648" x2="180.42880000000002" y2="163.6352" stroke="white" stroke-width="29.3888" stroke-linecap="round"/>
+  <line x1="180.42880000000002" y1="163.6352" x2="331.5712" y2="348.3648" stroke="white" stroke-width="29.3888" stroke-linecap="round"/>
+  <line x1="331.5712" y1="348.3648" x2="331.5712" y2="163.6352" stroke="white" stroke-width="29.3888" stroke-linecap="round"/>
 
-  <!-- N strokes -->
-  <line x1="163.84" y1="368.64" x2="163.84" y2="143.36" stroke="rgba(255,255,255,0.95)" stroke-width="35.84" stroke-linecap="round"/>
-  <line x1="163.84" y1="143.36" x2="348.15999999999997" y2="368.64" stroke="rgba(255,255,255,0.95)" stroke-width="35.84" stroke-linecap="round"/>
-  <line x1="348.15999999999997" y1="368.64" x2="348.15999999999997" y2="143.36" stroke="rgba(255,255,255,0.95)" stroke-width="35.84" stroke-linecap="round"/>
+  <circle cx="180.42880000000002" cy="163.6352" r="23.091199999999997" fill="white"/>
+  <circle cx="180.42880000000002" cy="348.3648" r="23.091199999999997" fill="white"/>
+  <circle cx="331.5712" cy="163.6352" r="23.091199999999997" fill="white"/>
+  <circle cx="331.5712" cy="348.3648" r="23.091199999999997" fill="white"/>
 
-  <!-- N corner nodes -->
-  <circle cx="163.84" cy="143.36" r="28.16" fill="white"/>
-  <circle cx="163.84" cy="368.64" r="28.16" fill="white"/>
-  <circle cx="348.15999999999997" cy="143.36" r="28.16" fill="white"/>
-  <circle cx="348.15999999999997" cy="368.64" r="28.16" fill="white"/>
-
-  <!-- Floating network dots -->
-  <line x1="409.6" y1="112.63999999999999" x2="450.56" y2="184.32" stroke="rgba(255,255,255,0.35)" stroke-width="7.68"/>
-  <line x1="409.6" y1="112.63999999999999" x2="424.96000000000004" y2="71.68" stroke="rgba(255,255,255,0.35)" stroke-width="7.68"/>
-  <line x1="450.56" y1="184.32" x2="424.96000000000004" y2="71.68" stroke="rgba(255,255,255,0.35)" stroke-width="7.68"/>
-  <circle cx="409.6" cy="112.63999999999999" r="17.92" fill="rgba(255,255,255,0.7)"/>
-  <circle cx="450.56" cy="184.32" r="12.8" fill="rgba(255,255,255,0.6)"/>
-  <circle cx="424.96000000000004" cy="71.68" r="12.8" fill="rgba(255,255,255,0.6)"/>
+  <line x1="381.952" y1="138.4448" x2="415.5392" y2="197.2224" stroke="rgba(255,255,255,0.35)" stroke-width="6.297599999999999"/>
+  <line x1="381.952" y1="138.4448" x2="394.5472" y2="104.85760000000002" stroke="rgba(255,255,255,0.35)" stroke-width="6.297599999999999"/>
+  <line x1="415.5392" y1="197.2224" x2="394.5472" y2="104.85760000000002" stroke="rgba(255,255,255,0.35)" stroke-width="6.297599999999999"/>
+  <circle cx="381.952" cy="138.4448" r="14.6944" fill="rgba(255,255,255,0.65)"/>
+  <circle cx="415.5392" cy="197.2224" r="10.496" fill="rgba(255,255,255,0.55)"/>
+  <circle cx="394.5472" cy="104.85760000000002" r="10.496" fill="rgba(255,255,255,0.55)"/>
 </svg>

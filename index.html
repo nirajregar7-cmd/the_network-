@@ -3,34 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>The Network — Academic Student Collaboration</title>
+    <title>The Network</title>
 
-    <!-- PWA -->
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#6366F1" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="msapplication-TileColor" content="#000000" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+
+    <!-- Android PWA -->
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Network" />
+
+    <!-- iOS Safari -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="The Network" />
+    <meta name="apple-mobile-web-app-title" content="Network" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="shortcut icon" href="/favicon.png" />
 
-    <!-- SEO / Open Graph -->
+    <!-- SEO -->
     <meta name="description" content="The premium verified student collaboration platform. Match co-founders, study partners and academic hubs." />
     <meta property="og:title" content="The Network" />
     <meta property="og:description" content="The premium verified student collaboration platform." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/icons/icon-512x512.png" />
 
-    <!-- Splash screen background for iOS -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-    <!-- Prevent auto-zoom on input focus (mobile) -->
+    <!-- Mobile UX -->
     <style>
       input, select, textarea { font-size: 16px; }
-      body { -webkit-tap-highlight-color: transparent; }
+      body { -webkit-tap-highlight-color: transparent; margin: 0; background: #000; }
     </style>
   </head>
   <body>
