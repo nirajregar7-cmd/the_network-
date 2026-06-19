@@ -119,3 +119,26 @@ export interface UserReport {
   createdAt: string;
   status: 'pending' | 'suspended' | 'dismissed';
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  actorId: string;
+  type: 'like' | 'comment' | 'connection_request' | 'connection_accepted' | 'message';
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  creatorId: string;
+  stage: 'Idea' | 'Building' | 'MVP' | 'Launched';
+  tags: string[];
+  lookingFor: string[];
+  memberIds: string[];
+  createdAt: string;
+}

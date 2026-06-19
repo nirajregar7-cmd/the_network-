@@ -7,7 +7,8 @@ import webpush from 'web-push';
 import nodemailer from 'nodemailer';
 import { db } from './db.js';
 import {
-  users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions
+  users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions,
+  notifications, projects
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
 
@@ -74,6 +75,19 @@ function toPost(p: typeof posts.$inferSelect, postComments: any[]) {
       createdAt: c.createdAt.toISOString(),
     })),
   };
+}
+
+// ─── NOTIFICATION HELPER ─────────────────────────────────────────────────────
+
+async function createNotification(userId: string, actorId: string, type: string, title: string, body: string) {
+  if (userId === actorId) return; // Don't notify yourself
+  try {
+    await db.insert(notifications).values({
+      id: generateId('notif'),
+      userId, actorId, type, title, body,
+      isRead: false,
+    });
+  } catch (_) {}
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
@@ -251,7 +265,7 @@ app.post('/api/posts/:id/like', async (req, res) => {
     const newLikes = isLiking ? [...likesArr, userId] : likesArr.filter(id => id !== userId);
     const updated = await db.update(posts).set({ likes: newLikes }).where(eq(posts.id, req.params.id)).returning();
     const postComments = await db.select().from(comments).where(eq(comments.postId, req.params.id));
-    // Push notification to post author
+    // Push notification + in-app notification to post author
     if (isLiking && post.authorId !== userId) {
       const liker = await db.select().from(users).where(eq(users.id, userId));
       if (liker.length) {
@@ -262,6 +276,7 @@ app.post('/api/posts/:id/like', async (req, res) => {
           tag: `like-${req.params.id}`,
           url: '/',
         });
+        await createNotification(post.authorId, userId, 'like', '❤️ New Like', `${liker[0].fullName} liked your post`);
       }
     }
     return res.json(toPost(updated[0], postComments));
@@ -279,6 +294,14 @@ app.post('/api/posts/:id/comments', async (req, res) => {
       authorId,
       content,
     }).returning();
+    // Notify post author
+    const post = await db.select().from(posts).where(eq(posts.id, req.params.id));
+    if (post.length && post[0].authorId !== authorId) {
+      const commenter = await db.select().from(users).where(eq(users.id, authorId));
+      if (commenter.length) {
+        await createNotification(post[0].authorId, authorId, 'comment', '💬 New Comment', `${commenter[0].fullName} commented on your post`);
+      }
+    }
     return res.json({ ...newComment[0], createdAt: newComment[0].createdAt.toISOString() });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -304,7 +327,6 @@ app.post('/api/connections', async (req, res) => {
       senderId, receiverId, type, message: message || '',
       status: 'pending',
     }).returning();
-    // Push notification to receiver
     const sender = await db.select().from(users).where(eq(users.id, senderId));
     if (sender.length) {
       sendPushToUser(receiverId, {
@@ -314,6 +336,7 @@ app.post('/api/connections', async (req, res) => {
         tag: `conn-${senderId}`,
         url: '/',
       });
+      await createNotification(receiverId, senderId, 'connection_request', '🤝 Connection Request', `${sender[0].fullName} wants to connect with you`);
     }
     return res.json({ ...newConn[0], createdAt: newConn[0].createdAt.toISOString() });
   } catch (err: any) {
@@ -324,7 +347,15 @@ app.post('/api/connections', async (req, res) => {
 app.put('/api/connections/:id', async (req, res) => {
   try {
     const { status } = req.body;
+    const found = await db.select().from(connections).where(eq(connections.id, req.params.id));
     const updated = await db.update(connections).set({ status }).where(eq(connections.id, req.params.id)).returning();
+    // Notify sender when accepted
+    if (status === 'accepted' && found.length) {
+      const receiver = await db.select().from(users).where(eq(users.id, found[0].receiverId));
+      if (receiver.length) {
+        await createNotification(found[0].senderId, found[0].receiverId, 'connection_accepted', '✅ Connection Accepted', `${receiver[0].fullName} accepted your connection request`);
+      }
+    }
     return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -350,9 +381,9 @@ app.post('/api/messages', async (req, res) => {
       senderId, receiverId, content,
       isRead: false,
     }).returning();
-    // Push notification to receiver
     const sender = await db.select().from(users).where(eq(users.id, senderId));
     if (sender.length) {
+      await createNotification(receiverId, senderId, 'message', `💬 ${sender[0].fullName}`, content.length > 80 ? content.substring(0, 80) + '…' : content);
       sendPushToUser(receiverId, {
         title: `💬 ${sender[0].fullName}`,
         body: content.length > 80 ? content.substring(0, 80) + '…' : content,
@@ -834,6 +865,121 @@ app.post('/api/seed/communities', async (req, res) => {
       }))
     ).returning();
     return res.json({ seeded: inserted.length });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+
+app.get('/api/notifications/:userId', async (req, res) => {
+  try {
+    const all = await db.select().from(notifications)
+      .where(eq(notifications.userId, req.params.userId))
+      .orderBy(desc(notifications.createdAt));
+    return res.json(all.map(n => ({ ...n, createdAt: n.createdAt.toISOString() })));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/notifications/:id/read', async (req, res) => {
+  try {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, req.params.id));
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/notifications/user/:userId/read-all', async (req, res) => {
+  try {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, req.params.userId));
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── PROJECTS ────────────────────────────────────────────────────────────────
+
+app.get('/api/projects', async (_req, res) => {
+  try {
+    const all = await db.select().from(projects).orderBy(desc(projects.createdAt));
+    return res.json(all.map(p => ({ ...p, createdAt: p.createdAt.toISOString() })));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/projects', async (req, res) => {
+  try {
+    const { title, description, creatorId, stage, tags, lookingFor } = req.body;
+    const newProject = await db.insert(projects).values({
+      id: generateId('proj'),
+      title, description, creatorId,
+      stage: stage || 'Idea',
+      tags: tags || [],
+      lookingFor: lookingFor || [],
+      memberIds: [creatorId],
+    }).returning();
+    return res.json({ ...newProject[0], createdAt: newProject[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/projects/:id', async (req, res) => {
+  try {
+    const { title, description, stage, tags, lookingFor } = req.body;
+    const found = await db.select().from(projects).where(eq(projects.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Project not found' });
+    const updated = await db.update(projects).set({
+      title: title ?? found[0].title,
+      description: description ?? found[0].description,
+      stage: stage ?? found[0].stage,
+      tags: tags ?? found[0].tags,
+      lookingFor: lookingFor ?? found[0].lookingFor,
+    }).where(eq(projects.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/projects/:id/join', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(projects).where(eq(projects.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Project not found' });
+    const memberIds = (found[0].memberIds as string[]) || [];
+    if (!memberIds.includes(userId)) {
+      const updated = await db.update(projects).set({ memberIds: [...memberIds, userId] }).where(eq(projects.id, req.params.id)).returning();
+      return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+    }
+    return res.json({ ...found[0], createdAt: found[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/projects/:id/leave', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(projects).where(eq(projects.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Project not found' });
+    const memberIds = ((found[0].memberIds as string[]) || []).filter(id => id !== userId);
+    const updated = await db.update(projects).set({ memberIds }).where(eq(projects.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    await db.delete(projects).where(eq(projects.id, req.params.id));
+    return res.json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

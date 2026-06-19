@@ -12,6 +12,8 @@ import MessagingSection from './components/MessagingSection';
 import CommunitiesSection from './components/CommunitiesSection';
 import ProfileSection from './components/ProfileSection';
 import AdminSection from './components/AdminSection';
+import ProjectsSection from './components/ProjectsSection';
+import NotificationsDropdown from './components/NotificationsDropdown';
 import Avatar from './components/Avatar';
 import InstallPrompt from './components/InstallPrompt';
 import NotificationSetup from './components/NotificationSetup';
@@ -34,7 +36,8 @@ import {
   Send,
   Sparkle,
   Heart,
-  Check
+  Check,
+  Rocket,
 } from 'lucide-react';
 
 type ThemeName = 'light' | 'dark' | 'ocean' | 'forest' | 'sunset' | 'midnight';
@@ -117,6 +120,15 @@ export default function App() {
     setProfileInterestsExpanded(false);
     setProfileLookingForExpanded(false);
   }, [viewingUserProfileId]);
+
+  // Notifications polling (every 25s)
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchNotifs = () => api.notifications.getForUser(currentUser.id).catch(() => null);
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 25000);
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     localStorage.setItem('network_theme', theme);
@@ -581,6 +593,8 @@ export default function App() {
             <LogOut size={14} />
           </button>
 
+          <NotificationsDropdown userId={currentUser.id} darkMode={darkMode} />
+
           <div className="hidden sm:flex bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 text-[11px] font-mono items-center font-bold">
             <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
             Live Database
@@ -670,6 +684,15 @@ export default function App() {
               >
                 <Users size={14} />
                 <span>Chapters</span>
+              </button>
+
+              <button
+                id="view-projects-tab"
+                onClick={() => setActiveView('projects')}
+                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'projects' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
+              >
+                <Rocket size={14} />
+                <span>Projects</span>
               </button>
 
               <button
@@ -783,6 +806,7 @@ export default function App() {
               posts={posts}
               allUsers={allUsers}
               communities={communities}
+              connections={connections}
               onAddPost={handleAddPost}
               onLikePost={handleLikePost}
               onAddComment={handleAddComment}
@@ -793,6 +817,17 @@ export default function App() {
               onRegisterEvent={handleRegisterEvent}
               onViewUserProfile={setViewingUserProfileId}
               onReactToStory={handleReactToStory}
+              onSendConnectionRequest={(receiverId) => handleSendConnectionRequest(receiverId, 'Friendship', `Hi! I'd love to connect with you.`)}
+            />
+          )}
+
+          {activeView === 'projects' && (
+            <ProjectsSection
+              currentUser={currentUser}
+              allUsers={allUsers}
+              connections={connections}
+              darkMode={darkMode}
+              onViewUserProfile={setViewingUserProfileId}
             />
           )}
 

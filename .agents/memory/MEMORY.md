@@ -1,1 +1,2 @@
 - [Neon DB + Express backend](neon-backend.md) — full-stack migration: Vite frontend proxies /api to Express on port 3001; Drizzle ORM manages all tables; no more localStorage/mock data.
+- [Three engagement features](engagement-features.md) — notifications (bell + DB table), smart matching (scored algorithm in FeedSection), project boards (full CRUD) all built and wired.

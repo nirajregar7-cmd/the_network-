@@ -75,4 +75,17 @@ export const api = {
     create: (data: any) => post('/reports', data),
     update: (id: string, status: string) => put(`/reports/${id}`, { status }),
   },
+  notifications: {
+    getForUser: (userId: string) => get(`/notifications/${userId}`),
+    markRead: (id: string) => put(`/notifications/${id}/read`, {}),
+    markAllRead: (userId: string) => put(`/notifications/user/${userId}/read-all`, {}),
+  },
+  projects: {
+    getAll: () => get('/projects'),
+    create: (data: any) => post('/projects', data),
+    update: (id: string, data: any) => put(`/projects/${id}`, data),
+    delete: (id: string) => del(`/projects/${id}`),
+    join: (id: string, userId: string) => put(`/projects/${id}/join`, { userId }),
+    leave: (id: string, userId: string) => put(`/projects/${id}/leave`, { userId }),
+  },
 };

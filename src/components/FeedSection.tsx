@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UserProfile, Post, Comment, Community, Story } from '../types';
+import { UserProfile, Post, Comment, Community, Story, Connection } from '../types';
 import {
   Heart,
   MessageCircle,
@@ -24,6 +24,7 @@ interface FeedSectionProps {
   posts: Post[];
   allUsers: UserProfile[];
   communities: Community[];
+  connections: Connection[];
   onAddPost: (
     content: string,
     academicTag: string,
@@ -34,15 +35,16 @@ interface FeedSectionProps {
   ) => void;
   onLikePost: (postId: string) => void;
   onAddComment: (postId: string, content: string) => void;
-  onDeletePost?: (postId: string) => void; // for admin role
+  onDeletePost?: (postId: string) => void;
   darkMode: boolean;
-  activeCommunityId?: string; // optional context filter
+  activeCommunityId?: string;
   stories: Story[];
   onAddStory: (content: string, image?: string) => void;
   registeredEvents?: string[];
   onRegisterEvent?: (eventId: string) => void;
   onViewUserProfile?: (userId: string) => void;
   onReactToStory?: (storyId: string, emoji: string) => void;
+  onSendConnectionRequest?: (receiverId: string) => void;
 }
 
 const POST_PRESETS = [
@@ -58,6 +60,7 @@ export default function FeedSection({
   posts,
   allUsers,
   communities,
+  connections,
   onAddPost,
   onLikePost,
   onAddComment,
@@ -69,7 +72,8 @@ export default function FeedSection({
   registeredEvents = [],
   onRegisterEvent,
   onViewUserProfile,
-  onReactToStory
+  onReactToStory,
+  onSendConnectionRequest,
 }: FeedSectionProps) {
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedTag, setSelectedTag] = useState('Startup Pitch 🚀');
@@ -193,10 +197,29 @@ export default function FeedSection({
     return true;
   });
 
-  // Hot Startup profiles suggestions for side recommendations bar
-  const hotStartups = allUsers
-    .filter(u => u.id !== currentUser.id && !u.isSuspended)
-    .slice(0, 3);
+  // Smart co-founder matching — score based on shared interests, complementary skills, shared lookingFor
+  const connectedUserIds = new Set(
+    connections
+      .filter(c => (c.senderId === currentUser.id || c.receiverId === currentUser.id))
+      .map(c => c.senderId === currentUser.id ? c.receiverId : c.senderId)
+  );
+
+  const scoredMatches = allUsers
+    .filter(u => u.id !== currentUser.id && !u.isSuspended && !connectedUserIds.has(u.id))
+    .map(u => {
+      let score = 0;
+      const sharedInterests = u.interests.filter(i => currentUser.interests.includes(i)).length;
+      const sharedLookingFor = u.lookingFor.filter(l => currentUser.lookingFor.includes(l)).length;
+      const complementarySkills = u.skills.filter(s => !currentUser.skills.includes(s) && currentUser.lookingFor.some(l => s.toLowerCase().includes(l.toLowerCase().substring(0, 4)))).length;
+      score += sharedInterests * 2;
+      score += sharedLookingFor * 2;
+      score += complementarySkills;
+      if (u.college === currentUser.college) score += 1;
+      return { user: u, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map(m => m.user);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
@@ -718,43 +741,52 @@ export default function FeedSection({
           </div>
         </div>
 
-        {/* Suggested Startup Co-Founders suggestions list */}
+        {/* Smart Co-Founder Matching */}
         <div className={`p-5 rounded-2xl border border-neutral-200 dark:border-white/10 ${darkMode ? 'bg-[#121217]' : 'bg-white'}`}>
           <div className="flex items-center justify-between mb-4 border-b border-neutral-100 dark:border-white/5 pb-2">
             <h3 className="text-[10px] font-sans font-extrabold uppercase tracking-wider text-slate-400 dark:text-zinc-400 flex items-center gap-1.5">
-              <TrendingUp size={13} className="text-amber-500" />
-              <span>SaaS Co-Founder Matches</span>
+              <Sparkle size={13} className="text-amber-500" />
+              <span>People You Should Meet</span>
             </h3>
-            <span className="text-[9px] font-mono opacity-50">Matches</span>
+            <span className="text-[9px] font-mono text-indigo-400 opacity-70">AI Match</span>
           </div>
 
-          <div className="space-y-4">
-            {hotStartups.map((user) => {
-              return (
-                <div 
-                  key={user.id} 
-                  className={`flex items-center justify-between gap-3 text-xs p-1.5 rounded-xl transition-all ${
-                    onViewUserProfile ? 'cursor-pointer hover:bg-neutral-500/5' : ''
-                  }`}
-                  onClick={() => onViewUserProfile && onViewUserProfile(user.id)}
-                  title={`View ${user.fullName}'s Profile`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
-                      <Avatar avatar={user.avatar} />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-800 dark:text-white leading-none truncate hover:underline">{user.fullName}</h4>
-                      <p className="text-[9px] text-slate-400 font-serif mt-0.5 truncate">{user.branch} • Year {user.year}</p>
-                    </div>
+          {scoredMatches.length === 0 ? (
+            <p className="text-[11px] text-slate-400 text-center py-4">You're connected with everyone! 🎉</p>
+          ) : (
+            <div className="space-y-3">
+              {scoredMatches.map((user) => {
+                const sharedCount = user.interests.filter(i => currentUser.interests.includes(i)).length
+                  + user.lookingFor.filter(l => currentUser.lookingFor.includes(l)).length;
+                return (
+                  <div key={user.id} className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => onViewUserProfile?.(user.id)}
+                      className={`flex items-center gap-2 min-w-0 flex-1 p-1.5 rounded-xl transition-all text-left ${onViewUserProfile ? 'cursor-pointer hover:bg-neutral-500/5' : ''}`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                        <Avatar avatar={user.avatar} />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-[11px] text-slate-800 dark:text-white leading-none truncate">{user.fullName}</h4>
+                        <p className="text-[9px] text-slate-400 mt-0.5 truncate">{user.branch} • Yr {user.year}</p>
+                        {sharedCount > 0 && (
+                          <p className="text-[8px] text-indigo-500 mt-0.5 font-semibold">{sharedCount} shared interest{sharedCount > 1 ? 's' : ''}</p>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => onSendConnectionRequest?.(user.id)}
+                      className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-[9px] font-bold transition-all cursor-pointer"
+                    >
+                      <UserPlus size={10} />
+                      Connect
+                    </button>
                   </div>
-                  <span className="text-[9px] font-mono text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded uppercase font-bold shrink-0">
-                    Connect
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
       </div>

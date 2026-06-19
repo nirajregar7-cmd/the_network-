@@ -1,6 +1,29 @@
 import { pgTable, text, boolean, integer, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+export const notifications = pgTable('notifications', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  actorId: text('actor_id').notNull(),
+  type: text('type').notNull(), // 'like' | 'comment' | 'connection_request' | 'connection_accepted' | 'message'
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  isRead: boolean('is_read').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const projects = pgTable('projects', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  creatorId: text('creator_id').notNull(),
+  stage: text('stage').notNull().default('Idea'),
+  tags: jsonb('tags').notNull().default([]),
+  lookingFor: jsonb('looking_for').notNull().default([]),
+  memberIds: jsonb('member_ids').notNull().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
   fullName: text('full_name').notNull(),
