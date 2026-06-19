@@ -514,7 +514,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
     const { email, purpose, data } = req.body as { email: string; purpose: 'login' | 'register'; data?: any };
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    if (purpose === 'login') {
+    if (purpose === 'login' || purpose === 'forgot-password') {
       const found = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim()));
       if (found.length === 0) return res.status(404).json({ error: 'No account found with this email' });
       if (found[0].isSuspended) return res.status(403).json({ error: 'Your account has been suspended.' });
@@ -547,6 +547,31 @@ app.post('/api/auth/send-otp', async (req, res) => {
     return res.json({ ok: true });
   } catch (err: any) {
     console.error('send-otp error', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body as { email: string; otp: string; newPassword: string };
+    if (!email || !otp || !newPassword) return res.status(400).json({ error: 'Email, OTP and new password are required' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const key = email.toLowerCase().trim();
+    const record = otpStore.get(key);
+    if (!record) return res.status(400).json({ error: 'No OTP requested. Please request a new one.' });
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(key);
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+    if (record.otp !== otp.trim()) return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+    if (record.purpose !== 'forgot-password') return res.status(400).json({ error: 'Invalid OTP purpose.' });
+    otpStore.delete(key);
+    const found = await db.select().from(users).where(eq(users.email, key));
+    if (!found.length) return res.status(404).json({ error: 'User not found' });
+    await db.update(users).set({ passwordHash: hashPassword(newPassword) }).where(eq(users.id, found[0].id));
+    return res.json({ ok: true });
+  } catch (err: any) {
+    console.error('reset-password error', err);
     return res.status(500).json({ error: err.message });
   }
 });
