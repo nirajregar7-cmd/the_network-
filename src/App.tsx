@@ -33,8 +33,7 @@ import {
   Settings,
   ShieldAlert,
   LogOut,
-  Sun,
-  Moon,
+  Palette,
   Sparkles,
   RefreshCw,
   Eye,
@@ -47,6 +46,17 @@ import {
   Heart,
   Check
 } from 'lucide-react';
+
+type ThemeName = 'light' | 'dark' | 'ocean' | 'forest' | 'sunset' | 'midnight';
+
+const THEMES: Record<ThemeName, { label: string; swatch: string; ring: string; isDark: boolean }> = {
+  light:    { label: 'Light',    swatch: '#E8E8EC', ring: '#94a3b8', isDark: false },
+  dark:     { label: 'Dark',     swatch: '#09090C', ring: '#475569', isDark: true  },
+  ocean:    { label: 'Ocean',    swatch: '#06172A', ring: '#38BDF8', isDark: true  },
+  forest:   { label: 'Forest',   swatch: '#061A0B', ring: '#34D399', isDark: true  },
+  sunset:   { label: 'Sunset',   swatch: '#FDF6EE', ring: '#F97316', isDark: false },
+  midnight: { label: 'Midnight', swatch: '#0E0720', ring: '#A855F7', isDark: true  },
+};
 
 const STOCK_PRESETS = [
   { url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=400&q=80', label: 'Collab 🤝' },
@@ -120,10 +130,13 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_STORIES;
   });
 
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('network_dark_mode');
-    return saved === 'true';
+  const [theme, setTheme] = useState<ThemeName>(() => {
+    const saved = localStorage.getItem('network_theme') as ThemeName;
+    if (saved && THEMES[saved]) return saved;
+    const oldDark = localStorage.getItem('network_dark_mode');
+    return oldDark === 'true' ? 'dark' : 'light';
   });
+  const darkMode = THEMES[theme].isDark;
 
   const [activeView, setActiveView] = useState<string>('feed');
   const [showDemoPortal, setShowDemoPortal] = useState<boolean>(false);
@@ -199,13 +212,12 @@ export default function App() {
   }, [stories]);
 
   useEffect(() => {
-    localStorage.setItem('network_dark_mode', String(darkMode));
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
+    localStorage.setItem('network_theme', theme);
+    const html = document.documentElement;
+    html.classList.remove('theme-light', 'theme-dark', 'theme-ocean', 'theme-forest', 'theme-sunset', 'theme-midnight', 'dark');
+    html.classList.add(`theme-${theme}`);
+    if (THEMES[theme].isDark) html.classList.add('dark');
+  }, [theme]);
 
   // Auth Operations
   const handleLogin = (user: UserProfile) => {
@@ -581,10 +593,10 @@ export default function App() {
   ).length;
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-all duration-300 ${darkMode ? 'bg-[#09090C] text-slate-100' : 'bg-[#F4F4F6] text-slate-950'}`}>
+    <div className={`min-h-screen flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
       {/* Main Top Header Block of Editorial Mockup */}
-      <header className={`border-b border-neutral-200 dark:border-white/10 px-6 lg:px-8 py-3.5 flex items-center justify-between transition-all sticky top-0 z-30 backdrop-blur-md ${darkMode ? 'bg-[#0E0E12]/90' : 'bg-white/90'}`}>
+      <header className="border-b border-neutral-200 dark:border-white/10 px-6 lg:px-8 py-3.5 flex items-center justify-between transition-all sticky top-0 z-30 backdrop-blur-md" style={{ backgroundColor: 'var(--t-header)' }}>
         <div className="flex items-center space-x-4 lg:space-x-8">
           <h1 className="text-xl lg:text-2xl font-serif italic font-black tracking-tight uppercase select-none bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
             The Network
@@ -599,11 +611,14 @@ export default function App() {
         <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Quick theme & logout actions displayed inside header on mobile/tablet viewports */}
           <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="md:hidden p-2 rounded-full border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-zinc-850 transition-all cursor-pointer text-slate-800 dark:text-slate-100"
-            title="Toggle Theme"
+            onClick={() => {
+              const keys = Object.keys(THEMES) as ThemeName[];
+              setTheme(keys[(keys.indexOf(theme) + 1) % keys.length]);
+            }}
+            className="md:hidden p-2 rounded-full border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/5 transition-all cursor-pointer text-slate-800 dark:text-slate-100"
+            title={`Theme: ${THEMES[theme].label}`}
           >
-            {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+            <Palette size={14} />
           </button>
           
           <button
@@ -644,7 +659,7 @@ export default function App() {
         
         {/* Navigation Sidebar Panel */}
         <aside className="w-full md:w-60 shrink-0 space-y-4">
-          <div className={`p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all ${darkMode ? 'bg-[#121217]' : 'bg-white'}`}>
+          <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className="hidden md:flex items-center gap-2 mb-4 pb-2 border-b border-neutral-100 dark:border-white/10">
               <span className="p-1 text-white bg-indigo-500 rounded-lg">
                 <GraduationCap size={14} />
@@ -728,19 +743,36 @@ export default function App() {
               )}
             </nav>
 
-            <div className="hidden md:block mt-6 pt-4 border-t border-neutral-150 dark:border-white/10 space-y-2">
-              {/* Theme Settings Switch */}
-              <button
-                id="btn-toggle-theme"
-                onClick={() => setDarkMode(!darkMode)}
-                className="w-full py-2 px-3 rounded-xl flex items-center justify-between text-xs font-semibold cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-neutral-100 dark:hover:bg-white/5 transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  {darkMode ? <Sun size={13} className="text-amber-400" /> : <Moon size={13} />}
-                  <span>{darkMode ? 'Light Theme' : 'Visual Dark'}</span>
+            <div className="hidden md:block mt-6 pt-4 border-t border-neutral-150 dark:border-white/10 space-y-3">
+              {/* Theme Picker */}
+              <div className="px-1">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Palette size={12} className="text-slate-400" />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Theme</span>
                 </div>
-                <span className="text-[10px] font-mono text-neutral-400">⌘T</span>
-              </button>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {(Object.entries(THEMES) as [ThemeName, typeof THEMES[ThemeName]][]).map(([key, t]) => (
+                    <button
+                      key={key}
+                      onClick={() => setTheme(key)}
+                      title={t.label}
+                      className="relative w-7 h-7 rounded-full transition-all cursor-pointer border-2 hover:scale-110 active:scale-95"
+                      style={{
+                        backgroundColor: t.swatch,
+                        borderColor: theme === key ? t.ring : 'transparent',
+                        boxShadow: theme === key ? `0 0 0 1px ${t.ring}40` : undefined,
+                      }}
+                    >
+                      {theme === key && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.ring }} />
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[9px] font-mono text-slate-400 dark:text-slate-600 pl-0.5">{THEMES[theme].label}</p>
+              </div>
 
               <button
                 id="btn-logout"
@@ -754,7 +786,7 @@ export default function App() {
           </div>
 
           {/* Profile Quick Summary Footer card */}
-          <div className={`hidden md:flex p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm text-left items-center gap-3 ${darkMode ? 'bg-[#121217]' : 'bg-white'}`}>
+          <div className="hidden md:flex p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm text-left items-center gap-3" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 overflow-hidden`}>
               <Avatar avatar={currentUser.avatar} />
             </div>

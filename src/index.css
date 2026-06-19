@@ -8,6 +8,49 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 
+/* ── Theme surface tokens ──────────────────────────────── */
+:root, html.theme-light {
+  --t-bg: #F4F4F6;
+  --t-card: #FFFFFF;
+  --t-header: rgba(255,255,255,0.9);
+  --t-border: rgba(229,229,229,0.8);
+}
+
+html.theme-dark {
+  --t-bg: #09090C;
+  --t-card: #121217;
+  --t-header: rgba(14,14,18,0.9);
+  --t-border: rgba(255,255,255,0.1);
+}
+
+html.theme-ocean {
+  --t-bg: #06172A;
+  --t-card: #0B2240;
+  --t-header: rgba(6,23,42,0.9);
+  --t-border: rgba(56,189,248,0.14);
+}
+
+html.theme-forest {
+  --t-bg: #061A0B;
+  --t-card: #0A2412;
+  --t-header: rgba(6,26,11,0.9);
+  --t-border: rgba(52,211,153,0.14);
+}
+
+html.theme-sunset {
+  --t-bg: #FDF6EE;
+  --t-card: #FFFFFF;
+  --t-header: rgba(253,246,238,0.95);
+  --t-border: rgba(251,146,60,0.25);
+}
+
+html.theme-midnight {
+  --t-bg: #0E0720;
+  --t-card: #180C30;
+  --t-header: rgba(14,7,32,0.9);
+  --t-border: rgba(168,85,247,0.18);
+}
+
 /* Hide scrollbars for chrome, safari, firefox, edge, opera and webviews */
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;
