@@ -672,6 +672,15 @@ export default function App() {
 
             <nav className="flex md:flex-col gap-1 md:space-y-0.5 overflow-x-auto md:overflow-visible no-scrollbar pb-1 md:pb-0 text-xs">
               <button
+                id="view-feed-tab"
+                onClick={() => setActiveView('feed')}
+                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'feed' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
+              >
+                <BookOpen size={14} />
+                <span>Home Feed</span>
+              </button>
+
+              <button
                 id="view-dashboard-tab"
                 onClick={() => setActiveView('dashboard')}
                 className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'dashboard' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
@@ -687,15 +696,6 @@ export default function App() {
               >
                 <Search size={14} />
                 <span>Discovery</span>
-              </button>
-
-              <button
-                id="view-feed-tab"
-                onClick={() => setActiveView('feed')}
-                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'feed' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
-              >
-                <BookOpen size={14} />
-                <span>Home Feed</span>
               </button>
 
               <button
