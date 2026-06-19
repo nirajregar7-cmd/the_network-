@@ -2,11 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { UserProfile, UserReport, Post, Community } from '../types';
 import {
   ShieldCheck, Users, AlertTriangle, Trash2,
-  ShieldAlert, Check, X, Search, GraduationCap,
+  ShieldAlert, X, Search, GraduationCap,
   TrendingUp, UserX, FileText, ChevronDown, ChevronUp,
-  Calendar, Mail, BookOpen, Star
+  Calendar, Mail, BookOpen, KeyRound, Eye, EyeOff
 } from 'lucide-react';
 import Avatar from './Avatar';
+import { api } from '../api';
 
 interface AdminSectionProps {
   currentUser: UserProfile;
@@ -38,6 +39,27 @@ export default function AdminSection({
   const [userFilter, setUserFilter] = useState<'all' | 'active' | 'suspended'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'college'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetShowPw, setResetShowPw] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  const handleResetPassword = async (userId: string) => {
+    if (!resetPassword.trim() || resetPassword.length < 4) return;
+    setResetLoading(true);
+    try {
+      await api.users.resetPassword(userId, resetPassword);
+      setResetSuccess(userId);
+      setResetUserId(null);
+      setResetPassword('');
+      setTimeout(() => setResetSuccess(null), 3000);
+    } catch (err: any) {
+      alert('Failed to reset password: ' + err.message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   if (currentUser.role !== 'admin') {
     return (
@@ -309,19 +331,69 @@ export default function AdminSection({
                             </span>
                           )}
                         </td>
-                        <td className="p-3 text-right">
-                          {user.id !== currentUser.id && user.role !== 'admin' && (
-                            <button
-                              onClick={() => onToggleUserSuspension(user.id)}
-                              className={`py-1 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-                                user.isSuspended
-                                  ? 'bg-emerald-600 border-transparent text-white hover:bg-emerald-700'
-                                  : 'bg-transparent border-rose-500/30 text-rose-500 hover:bg-rose-500/10'
-                              }`}
-                            >
-                              {user.isSuspended ? 'Restore' : 'Suspend'}
-                            </button>
-                          )}
+                        <td className="p-3">
+                          <div className="flex flex-col gap-1.5 items-end">
+                            {resetSuccess === user.id && (
+                              <span className="text-[9px] font-bold text-emerald-500 uppercase">✓ Password Updated</span>
+                            )}
+
+                            {resetUserId === user.id ? (
+                              <div className={`flex items-center gap-1.5 p-2 rounded-xl border ${darkMode ? 'bg-[#09090C] border-white/10' : 'bg-neutral-50 border-neutral-200'}`}>
+                                <div className="relative">
+                                  <input
+                                    type={resetShowPw ? 'text' : 'password'}
+                                    placeholder="New password"
+                                    value={resetPassword}
+                                    onChange={e => setResetPassword(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleResetPassword(user.id)}
+                                    className="bg-transparent outline-none text-xs w-28 pr-5"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => setResetShowPw(p => !p)}
+                                    className="absolute right-0 top-0 opacity-40 hover:opacity-80 cursor-pointer"
+                                  >
+                                    {resetShowPw ? <EyeOff size={11} /> : <Eye size={11} />}
+                                  </button>
+                                </div>
+                                <button
+                                  onClick={() => handleResetPassword(user.id)}
+                                  disabled={resetLoading || resetPassword.length < 4}
+                                  className="py-1 px-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] font-bold uppercase cursor-pointer disabled:opacity-40 transition-colors"
+                                >
+                                  {resetLoading ? '...' : 'Set'}
+                                </button>
+                                <button
+                                  onClick={() => { setResetUserId(null); setResetPassword(''); }}
+                                  className="opacity-40 hover:opacity-80 cursor-pointer"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => { setResetUserId(user.id); setResetPassword(''); setResetShowPw(false); }}
+                                  className="py-1 px-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/10 transition-all cursor-pointer flex items-center gap-1"
+                                  title="Reset Password"
+                                >
+                                  <KeyRound size={10} /> Reset PW
+                                </button>
+                                {user.id !== currentUser.id && user.role !== 'admin' && (
+                                  <button
+                                    onClick={() => onToggleUserSuspension(user.id)}
+                                    className={`py-1 px-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+                                      user.isSuspended
+                                        ? 'bg-emerald-600 border-transparent text-white hover:bg-emerald-700'
+                                        : 'bg-transparent border-rose-500/30 text-rose-500 hover:bg-rose-500/10'
+                                    }`}
+                                  >
+                                    {user.isSuspended ? 'Restore' : 'Suspend'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))

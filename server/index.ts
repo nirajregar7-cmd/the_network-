@@ -159,6 +159,23 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
+app.put('/api/users/:id/reset-password', async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+    const updated = await db.update(users)
+      .set({ passwordHash: hashPassword(newPassword) })
+      .where(eq(users.id, req.params.id))
+      .returning();
+    if (!updated.length) return res.status(404).json({ error: 'User not found' });
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/users/:id/suspend', async (req, res) => {
   try {
     const found = await db.select().from(users).where(eq(users.id, req.params.id));

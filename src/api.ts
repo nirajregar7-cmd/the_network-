@@ -26,6 +26,7 @@ export const api = {
     getById: (id: string) => get(`/users/${id}`),
     update: (id: string, data: any) => put(`/users/${id}`, data),
     toggleSuspend: (id: string) => put(`/users/${id}/suspend`, {}),
+    resetPassword: (id: string, newPassword: string) => put(`/users/${id}/reset-password`, { newPassword }),
   },
   posts: {
     getAll: () => get('/posts'),
