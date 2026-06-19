@@ -20,6 +20,8 @@ export const api = {
   auth: {
     login: (email: string, password: string) => post('/auth/login', { email, password }),
     register: (data: any) => post('/auth/register', data),
+    sendOtp: (email: string, purpose: 'login' | 'register', data?: any) => post('/auth/send-otp', { email, purpose, data }),
+    verifyOtp: (email: string, otp: string) => post('/auth/verify-otp', { email, otp }),
   },
   users: {
     getAll: () => get('/users'),

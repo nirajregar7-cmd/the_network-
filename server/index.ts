@@ -502,6 +502,107 @@ app.put('/api/reports/:id', async (req, res) => {
   }
 });
 
+// ─── OTP STORE (in-memory, 10 min TTL) ───────────────────────────────────────
+const otpStore = new Map<string, { otp: string; expiresAt: number; purpose: 'login' | 'register'; data?: any }>();
+
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const { email, purpose, data } = req.body as { email: string; purpose: 'login' | 'register'; data?: any };
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    if (purpose === 'login') {
+      const found = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim()));
+      if (found.length === 0) return res.status(404).json({ error: 'No account found with this email' });
+      if (found[0].isSuspended) return res.status(403).json({ error: 'Your account has been suspended.' });
+    }
+
+    const otp = generateOTP();
+    otpStore.set(email.toLowerCase().trim(), { otp, expiresAt: Date.now() + 10 * 60 * 1000, purpose, data });
+
+    await gmailTransporter.sendMail({
+      from: `"The Network" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: `Your OTP for The Network — ${otp}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+          <div style="background: linear-gradient(135deg, #6366f1, #a855f7); padding: 20px 24px; border-radius: 12px 12px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">The Network</h1>
+            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 12px;">Campus Co-founder Hub</p>
+          </div>
+          <div style="background: #f9f9fb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 32px 24px; text-align: center;">
+            <p style="font-size: 14px; color: #374151; margin: 0 0 16px;">Your one-time verification code is:</p>
+            <div style="background: white; border: 2px solid #6366f1; border-radius: 12px; padding: 16px 24px; display: inline-block; margin: 0 0 16px;">
+              <span style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #6366f1; font-family: monospace;">${otp}</span>
+            </div>
+            <p style="font-size: 12px; color: #9ca3af; margin: 0;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+          </div>
+        </div>
+      `,
+    });
+
+    return res.json({ ok: true });
+  } catch (err: any) {
+    console.error('send-otp error', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body as { email: string; otp: string };
+    const key = email.toLowerCase().trim();
+    const record = otpStore.get(key);
+
+    if (!record) return res.status(400).json({ error: 'No OTP requested for this email. Please request a new one.' });
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(key);
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+    if (record.otp !== otp.trim()) return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+
+    otpStore.delete(key);
+
+    if (record.purpose === 'login') {
+      const found = await db.select().from(users).where(eq(users.email, key));
+      if (!found.length) return res.status(404).json({ error: 'User not found' });
+      await db.update(users).set({ isVerified: true }).where(eq(users.id, found[0].id));
+      return res.json({ user: toUserProfile({ ...found[0], isVerified: true }) });
+    } else {
+      // register
+      const d = record.data;
+      const existing = await db.select().from(users).where(eq(users.email, key));
+      if (existing.length > 0) return res.status(409).json({ error: 'Email already registered' });
+      const initials = d.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+      const newUser = await db.insert(users).values({
+        id: generateId('user'),
+        fullName: d.fullName,
+        college: d.college,
+        branch: d.branch,
+        year: Number(d.year) || 1,
+        email: key,
+        passwordHash: hashPassword(d.password),
+        avatar: d.avatar || initials,
+        aboutMe: '',
+        interests: [],
+        skills: [],
+        lookingFor: [],
+        isVerified: true,
+        isSuspended: false,
+        role: 'student',
+        privacySettings: { showEmail: true, onlyAllowVerifiedConnections: false, hideProfileFromSearch: false },
+      }).returning();
+      return res.json({ user: toUserProfile(newUser[0]) });
+    }
+  } catch (err: any) {
+    console.error('verify-otp error', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── EMAIL ───────────────────────────────────────────────────────────────────
 
 app.post('/api/admin/send-email', async (req, res) => {
