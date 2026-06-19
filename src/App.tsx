@@ -4,6 +4,7 @@ import { ALL_PREDEFINED_CHAPTERS } from './data/chaptersData';
 import { api } from './api';
 
 import AuthSection from './components/AuthSection';
+import OnboardingSection from './components/OnboardingSection';
 import DashboardSection from './components/DashboardSection';
 import DiscoverySection from './components/DiscoverySection';
 import FeedSection from './components/FeedSection';
@@ -87,6 +88,7 @@ export default function App() {
   const [reports, setReports] = useState<UserReport[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [theme, setTheme] = useState<ThemeName>(() => {
     const saved = localStorage.getItem('network_theme') as ThemeName;
@@ -161,15 +163,31 @@ export default function App() {
     loadAppData();
   }, [loadAppData]);
 
+  const isNewUser = (user: UserProfile) =>
+    !user.aboutMe && user.interests.length === 0 && user.skills.length === 0 && user.lookingFor.length === 0;
+
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
-    setActiveView('feed');
     setAllUsers(prev => {
       if (prev.some(u => u.id === user.id)) {
         return prev.map(u => u.id === user.id ? user : u);
       }
       return [...prev, user];
     });
+    if (isNewUser(user)) {
+      setShowOnboarding(true);
+    } else {
+      setActiveView('feed');
+    }
+  };
+
+  const handleOnboardingComplete = async (updates: Partial<UserProfile>) => {
+    if (!currentUser) return;
+    const saved = await api.users.update(currentUser.id, { ...currentUser, ...updates });
+    setCurrentUser(saved);
+    setAllUsers(prev => prev.map(u => u.id === saved.id ? saved : u));
+    setShowOnboarding(false);
+    setActiveView('feed');
   };
 
   const handleLogout = () => {
@@ -509,6 +527,16 @@ export default function App() {
     return (
       <AuthSection
         onLogin={handleLogin}
+        darkMode={darkMode}
+      />
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <OnboardingSection
+        user={currentUser}
+        onComplete={handleOnboardingComplete}
         darkMode={darkMode}
       />
     );
