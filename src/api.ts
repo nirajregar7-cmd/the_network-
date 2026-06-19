@@ -23,6 +23,8 @@ export const api = {
     sendOtp: (email: string, purpose: 'login' | 'register' | 'forgot-password', data?: any) => post('/auth/send-otp', { email, purpose, data }),
     verifyOtp: (email: string, otp: string) => post('/auth/verify-otp', { email, otp }),
     resetPassword: (email: string, otp: string, newPassword: string) => post('/auth/reset-password', { email, otp, newPassword }),
+    sendEmailChangeOtp: (currentEmail: string, newEmail: string) => post('/auth/send-email-change-otp', { currentEmail, newEmail }),
+    confirmEmailChange: (currentEmail: string, otp: string) => post('/auth/confirm-email-change', { currentEmail, otp }),
   },
   users: {
     getAll: () => get('/users'),

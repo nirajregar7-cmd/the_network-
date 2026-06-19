@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile } from '../types';
-import { Mail, Key, User, Award, GraduationCap, ArrowRight, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
+import { Mail, Key, User, Award, GraduationCap, ArrowRight, RefreshCw, ShieldCheck, Lock, AtSign } from 'lucide-react';
 import CollegeSelector from './CollegeSelector';
 import { api } from '../api';
 
@@ -10,7 +10,7 @@ interface AuthSectionProps {
 }
 
 type Step = 'form' | 'otp' | 'new-password';
-type Mode = 'login' | 'register' | 'forgot';
+type Mode = 'login' | 'register' | 'forgot' | 'update-email';
 
 export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
   const [mode, setMode] = useState<Mode>('login');
@@ -24,6 +24,8 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
   const [college, setCollege] = useState('');
   const [branch, setBranch] = useState('Computer Science');
   const [year, setYear] = useState(1);
+  const [currentEmail, setCurrentEmail] = useState('');
+  const [newEmail, setNewEmail] = useState('');
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -88,10 +90,49 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
     }
   };
 
+  const sendEmailChangeOtp = async () => {
+    setError(''); setSuccess('');
+    if (!currentEmail || !newEmail) { setError('Please fill in both emails.'); return; }
+    if (!newEmail.includes('@gmail.com') && !newEmail.includes('@')) { setError('Please enter a valid email.'); return; }
+    setLoading(true);
+    try {
+      await api.auth.sendEmailChangeOtp(currentEmail, newEmail);
+      setStep('otp');
+      setResendCooldown(60);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmEmailChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = otp.join('');
+    if (code.length < 6) { setError('Please enter the 6-digit code.'); return; }
+    setLoading(true); setError('');
+    try {
+      const { email: updated } = await api.auth.confirmEmailChange(currentEmail, code);
+      setSuccess(`Email updated to ${updated}! You can now sign in with your new email.`);
+      setTimeout(() => switchMode('login'), 2500);
+    } catch (err: any) {
+      setError(err.message);
+      setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otp.join('');
     if (code.length < 6) { setError('Please enter the 6-digit code.'); return; }
+
+    if (mode === 'update-email') {
+      confirmEmailChange(e);
+      return;
+    }
 
     if (mode === 'forgot') {
       setStep('new-password');
@@ -151,12 +192,12 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
           </div>
           <h1 className="text-2xl font-extrabold tracking-wide uppercase text-indigo-500">The Network</h1>
           <p className="text-xs mt-1.5 max-w-xs mx-auto text-slate-400">
-            {mode === 'forgot' ? 'Reset your password' : 'The premium verified student collaboration platform.'}
+            {mode === 'forgot' ? 'Reset your password' : mode === 'update-email' ? 'Switch to your personal email' : 'The premium verified student collaboration platform.'}
           </p>
         </div>
 
-        {/* Tab switcher — hide on forgot mode */}
-        {step === 'form' && mode !== 'forgot' && (
+        {/* Tab switcher — hide on forgot / update-email mode */}
+        {step === 'form' && mode !== 'forgot' && mode !== 'update-email' && (
           <div className={`flex rounded-xl p-1 mb-6 text-xs font-bold uppercase tracking-wider border border-neutral-200 dark:border-white/5 ${darkMode ? 'bg-[#09090C]' : 'bg-neutral-100'}`}>
             <button onClick={() => switchMode('login')} className={`py-2 flex-1 rounded-lg transition-all cursor-pointer ${mode === 'login' ? 'bg-indigo-500 text-white shadow-sm' : 'opacity-40 hover:opacity-80 text-slate-400'}`}>
               Sign In
@@ -295,6 +336,49 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
                 {mode === 'login' ? 'Register here' : 'Sign in'}
               </button>
             </p>
+            {mode === 'login' && (
+              <p className="text-center text-[10px] text-slate-400">
+                Registered with institute email?{' '}
+                <button type="button" onClick={() => switchMode('update-email')} className="text-indigo-500 font-bold underline cursor-pointer">
+                  Switch to Gmail
+                </button>
+              </p>
+            )}
+          </form>
+        )}
+
+        {/* ── UPDATE EMAIL form ── */}
+        {mode === 'update-email' && step === 'form' && (
+          <form onSubmit={e => { e.preventDefault(); sendEmailChangeOtp(); }} className="space-y-4 text-left">
+            <div className={`p-3 rounded-xl text-[10.5px] text-center border ${darkMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-700'}`}>
+              Enter your current institute email and the Gmail you want to use instead. We'll verify your Gmail with an OTP.
+            </div>
+            <div>
+              <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Current Institute Email</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><Mail size={15} /></span>
+                <input type="email" required placeholder="you@nitt.edu" value={currentEmail} onChange={e => setCurrentEmail(e.target.value)} className={input} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Your Personal Gmail</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><AtSign size={15} /></span>
+                <input type="email" required placeholder="you@gmail.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} className={input} />
+              </div>
+            </div>
+            <button type="submit" disabled={loading} className="w-full mt-2 py-2.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white font-extrabold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer">
+              {loading ? (
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending OTP...</>
+              ) : (
+                <>Send Verification OTP <ArrowRight size={14} /></>
+              )}
+            </button>
+            <p className="text-center text-[10px] text-slate-400 pt-1">
+              <button type="button" onClick={() => switchMode('login')} className="text-indigo-500 font-bold underline cursor-pointer">
+                ← Back to Sign In
+              </button>
+            </p>
           </form>
         )}
 
@@ -305,13 +389,11 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-500 mb-4">
                 <ShieldCheck size={22} />
               </div>
-              <h2 className="font-bold text-base mb-1">
-                {mode === 'forgot' ? 'Check your email' : 'Check your email'}
-              </h2>
+              <h2 className="font-bold text-base mb-1">Check your email</h2>
               <p className="text-xs text-slate-400">
-                {mode === 'forgot'
-                  ? <>We sent a reset code to<br /><strong className="text-slate-700 dark:text-slate-200">{email}</strong></>
-                  : <>We sent a 6-digit OTP to<br /><strong className="text-slate-700 dark:text-slate-200">{email}</strong></>
+                {mode === 'update-email'
+                  ? <>We sent a verification code to your Gmail<br /><strong className="text-slate-700 dark:text-slate-200">{newEmail}</strong></>
+                  : <>We sent a 6-digit code to<br /><strong className="text-slate-700 dark:text-slate-200">{mode === 'forgot' ? email : email}</strong></>
                 }
               </p>
             </div>
@@ -356,7 +438,11 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => sendOtp(true)}
+                onClick={() => {
+                  setOtp(['', '', '', '', '', '']);
+                  if (mode === 'update-email') sendEmailChangeOtp();
+                  else sendOtp(true);
+                }}
                 disabled={resendCooldown > 0 || loading}
                 className="text-xs text-indigo-500 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 mx-auto transition-colors"
               >

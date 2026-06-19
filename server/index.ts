@@ -551,6 +551,64 @@ app.post('/api/auth/send-otp', async (req, res) => {
   }
 });
 
+app.post('/api/auth/send-email-change-otp', async (req, res) => {
+  try {
+    const { currentEmail, newEmail } = req.body as { currentEmail: string; newEmail: string };
+    if (!currentEmail || !newEmail) return res.status(400).json({ error: 'Both current and new email are required' });
+    const current = currentEmail.toLowerCase().trim();
+    const next = newEmail.toLowerCase().trim();
+    const found = await db.select().from(users).where(eq(users.email, current));
+    if (found.length === 0) return res.status(404).json({ error: 'No account found with that institute email' });
+    if (found[0].isSuspended) return res.status(403).json({ error: 'Your account has been suspended.' });
+    const taken = await db.select().from(users).where(eq(users.email, next));
+    if (taken.length > 0) return res.status(409).json({ error: 'That email is already used by another account' });
+    const otp = generateOTP();
+    otpStore.set(`emailchange:${current}`, { otp, expiresAt: Date.now() + 10 * 60 * 1000, purpose: 'login', data: { currentEmail: current, newEmail: next } });
+    await gmailTransporter.sendMail({
+      from: `"The Network" <${process.env.GMAIL_USER}>`,
+      to: next,
+      subject: `Verify your new email for The Network — ${otp}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+          <div style="background: linear-gradient(135deg, #6366f1, #a855f7); padding: 20px 24px; border-radius: 12px 12px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">The Network</h1>
+          </div>
+          <div style="background: #f9f9fb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 32px 24px; text-align: center;">
+            <p style="font-size: 14px; color: #374151; margin: 0 0 16px;">Your email change verification code is:</p>
+            <div style="background: white; border: 2px solid #6366f1; border-radius: 12px; padding: 16px 24px; display: inline-block; margin: 0 0 16px;">
+              <span style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #6366f1; font-family: monospace;">${otp}</span>
+            </div>
+            <p style="font-size: 12px; color: #9ca3af; margin: 0;">Expires in <strong>10 minutes</strong>. Do not share it.</p>
+          </div>
+        </div>`,
+    });
+    return res.json({ ok: true });
+  } catch (err: any) {
+    console.error('send-email-change-otp error', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/confirm-email-change', async (req, res) => {
+  try {
+    const { currentEmail, otp } = req.body as { currentEmail: string; otp: string };
+    if (!currentEmail || !otp) return res.status(400).json({ error: 'Current email and OTP are required' });
+    const key = `emailchange:${currentEmail.toLowerCase().trim()}`;
+    const record = otpStore.get(key);
+    if (!record) return res.status(400).json({ error: 'No OTP requested. Please request a new one.' });
+    if (Date.now() > record.expiresAt) { otpStore.delete(key); return res.status(400).json({ error: 'OTP expired. Please request a new one.' }); }
+    if (record.otp !== otp.trim()) return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+    otpStore.delete(key);
+    const { currentEmail: current, newEmail } = record.data as { currentEmail: string; newEmail: string };
+    const updated = await db.update(users).set({ email: newEmail }).where(eq(users.email, current)).returning();
+    if (!updated.length) return res.status(404).json({ error: 'User not found' });
+    return res.json({ ok: true, email: newEmail });
+  } catch (err: any) {
+    console.error('confirm-email-change error', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body as { email: string; otp: string; newPassword: string };
