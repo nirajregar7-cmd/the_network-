@@ -4,11 +4,21 @@ import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
+import nodemailer from 'nodemailer';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
+
+// ── Gmail / Nodemailer setup ──────────────────────────────────────────────────
+const gmailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 // ── VAPID setup ───────────────────────────────────────────────────────────────
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || 'BMFhS7bR4UacelWJY8tepeccTdJW-FXMCDnFsNwzpWuyRS3n_-ayeRde3XSIvLt83L5WssZXn44RMcL5zPzQxhQ';
@@ -487,6 +497,75 @@ app.put('/api/reports/:id', async (req, res) => {
     const { status } = req.body;
     const updated = await db.update(reports).set({ status }).where(eq(reports.id, req.params.id)).returning();
     return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── EMAIL ───────────────────────────────────────────────────────────────────
+
+app.post('/api/admin/send-email', async (req, res) => {
+  try {
+    const { to, subject, body, sendToAll } = req.body as {
+      to?: string[];
+      subject: string;
+      body: string;
+      sendToAll?: boolean;
+    };
+
+    if (!subject || !body) {
+      return res.status(400).json({ error: 'subject and body are required' });
+    }
+
+    let recipients: string[] = [];
+    if (sendToAll) {
+      const allUsers = await db.select({ email: users.email }).from(users);
+      recipients = allUsers.map(u => u.email).filter(Boolean);
+    } else {
+      recipients = (to || []).filter(Boolean);
+    }
+
+    if (recipients.length === 0) {
+      return res.status(400).json({ error: 'No recipients found' });
+    }
+
+    const results = { sent: 0, failed: 0, errors: [] as string[] };
+
+    // Send in batches of 10 to avoid rate limits
+    const batchSize = 10;
+    for (let i = 0; i < recipients.length; i += batchSize) {
+      const batch = recipients.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map(async (email) => {
+          try {
+            await gmailTransporter.sendMail({
+              from: `"The Network" <${process.env.GMAIL_USER}>`,
+              to: email,
+              subject,
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+                  <div style="background: linear-gradient(135deg, #6366f1, #a855f7); padding: 20px 24px; border-radius: 12px 12px 0 0;">
+                    <h1 style="color: white; margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">The Network</h1>
+                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 12px;">Campus Co-founder Hub</p>
+                  </div>
+                  <div style="background: #f9f9fb; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 24px;">
+                    <div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #374151;">${body.replace(/\n/g, '<br/>')}</div>
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+                    <p style="font-size: 11px; color: #9ca3af; margin: 0;">This email was sent from The Network platform. Please do not reply to this email.</p>
+                  </div>
+                </div>
+              `,
+            });
+            results.sent++;
+          } catch (err: any) {
+            results.failed++;
+            results.errors.push(`${email}: ${err.message}`);
+          }
+        })
+      );
+    }
+
+    return res.json(results);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

@@ -29,6 +29,10 @@ export const api = {
     resetPassword: (id: string, newPassword: string) => put(`/users/${id}/reset-password`, { newPassword }),
     bulkImport: (rows: any[]) => post('/admin/import-users', { rows }),
   },
+  email: {
+    send: (subject: string, body: string, to?: string[], sendToAll?: boolean) =>
+      post('/admin/send-email', { subject, body, to, sendToAll }),
+  },
   posts: {
     getAll: () => get('/posts'),
     create: (data: any) => post('/posts', data),

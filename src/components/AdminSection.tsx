@@ -5,7 +5,7 @@ import {
   ShieldAlert, X, Search, GraduationCap,
   TrendingUp, UserX, FileText, ChevronDown, ChevronUp,
   Calendar, Mail, BookOpen, KeyRound, Eye, EyeOff,
-  Upload, Download, CheckCircle2, AlertCircle
+  Upload, Download, CheckCircle2, AlertCircle, Send
 } from 'lucide-react';
 import Avatar from './Avatar';
 import { api } from '../api';
@@ -22,7 +22,7 @@ interface AdminSectionProps {
   darkMode: boolean;
 }
 
-type AdminTab = 'users' | 'reports' | 'posts' | 'import';
+type AdminTab = 'users' | 'reports' | 'posts' | 'import' | 'email';
 
 export default function AdminSection({
   currentUser,
@@ -52,6 +52,36 @@ export default function AdminSection({
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ inserted: number; skipped: number; errors: string[] } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailMode, setEmailMode] = useState<'all' | 'custom'>('all');
+  const [emailCustomTo, setEmailCustomTo] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailResult, setEmailResult] = useState<{ sent: number; failed: number; errors: string[] } | null>(null);
+  const [emailError, setEmailError] = useState('');
+
+  const handleSendEmail = async () => {
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      setEmailError('Subject and message body are required.');
+      return;
+    }
+    setSendingEmail(true);
+    setEmailError('');
+    setEmailResult(null);
+    try {
+      const to = emailMode === 'custom'
+        ? emailCustomTo.split(/[\n,]+/).map(e => e.trim()).filter(Boolean)
+        : undefined;
+      const result = await api.email.send(emailSubject, emailBody, to, emailMode === 'all');
+      setEmailResult(result);
+      if (result.sent > 0) { setEmailSubject(''); setEmailBody(''); setEmailCustomTo(''); }
+    } catch (err: any) {
+      setEmailError('Failed to send: ' + err.message);
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const handleResetPassword = async (userId: string) => {
     if (!resetPassword.trim() || resetPassword.length < 4) return;
@@ -207,6 +237,7 @@ export default function AdminSection({
     { id: 'reports', label: 'Reports', count: pendingReports.length },
     { id: 'posts', label: 'Post Moderation', count: posts.length },
     { id: 'import', label: 'CSV Import' },
+    { id: 'email', label: 'Send Email' },
   ];
 
   return (
@@ -588,6 +619,135 @@ export default function AdminSection({
             )}
           </div>
         )}
+        {/* EMAIL TAB */}
+        {activeTab === 'email' && (
+          <div className="p-5 space-y-5">
+
+            <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-[#09090C] border-white/10' : 'bg-indigo-50 border-indigo-100'}`}>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-500 mb-1 flex items-center gap-1.5">
+                <Mail size={13} /> Send Email to Students
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Send a formatted email from your Gmail account directly to student college IDs.
+              </p>
+            </div>
+
+            {/* Mode selector */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEmailMode('all')}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${emailMode === 'all' ? 'bg-indigo-600 text-white border-transparent' : 'border-neutral-200 dark:border-white/10 text-slate-500 hover:border-indigo-400 hover:text-indigo-500'}`}
+              >
+                All Students ({allUsers.length})
+              </button>
+              <button
+                onClick={() => setEmailMode('custom')}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${emailMode === 'custom' ? 'bg-indigo-600 text-white border-transparent' : 'border-neutral-200 dark:border-white/10 text-slate-500 hover:border-indigo-400 hover:text-indigo-500'}`}
+              >
+                Specific Emails
+              </button>
+            </div>
+
+            {/* Custom recipient box */}
+            {emailMode === 'custom' && (
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Email Addresses (one per line or comma-separated)
+                </label>
+                <textarea
+                  value={emailCustomTo}
+                  onChange={e => setEmailCustomTo(e.target.value)}
+                  placeholder="107124072@nitt.edu&#10;107124073@nitt.edu&#10;107124074@nitt.edu"
+                  rows={4}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-xs font-mono outline-none resize-none ${darkMode ? 'bg-[#09090C] border-white/10 text-slate-200 placeholder:text-slate-600' : 'bg-white border-neutral-200 text-slate-800 placeholder:text-slate-300'}`}
+                />
+              </div>
+            )}
+
+            {/* Subject */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Subject</label>
+              <input
+                type="text"
+                value={emailSubject}
+                onChange={e => setEmailSubject(e.target.value)}
+                placeholder="Welcome to The Network — NIT Tiruchirappalli"
+                className={`w-full rounded-xl border px-3 py-2.5 text-xs outline-none ${darkMode ? 'bg-[#09090C] border-white/10 text-slate-200 placeholder:text-slate-600' : 'bg-white border-neutral-200 text-slate-800 placeholder:text-slate-300'}`}
+              />
+            </div>
+
+            {/* Body */}
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Message Body</label>
+              <textarea
+                value={emailBody}
+                onChange={e => setEmailBody(e.target.value)}
+                placeholder={`Hi,\n\nYou are invited to join The Network — the campus co-founder and collaboration platform for NIT Tiruchirappalli students.\n\nSign up at: https://your-app.replit.app\n\nYour login email is your college email ID.\n\nRegards,\nThe Network Team`}
+                rows={10}
+                className={`w-full rounded-xl border px-3 py-2.5 text-xs outline-none resize-y font-mono leading-relaxed ${darkMode ? 'bg-[#09090C] border-white/10 text-slate-200 placeholder:text-slate-600' : 'bg-white border-neutral-200 text-slate-800 placeholder:text-slate-300'}`}
+              />
+            </div>
+
+            {/* Error */}
+            {emailError && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                <p>{emailError}</p>
+              </div>
+            )}
+
+            {/* Result */}
+            {emailResult && (
+              <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-emerald-950/20 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 size={16} className="text-emerald-500" />
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">Emails Sent!</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-xs mb-2">
+                  <div className={`p-3 rounded-xl ${darkMode ? 'bg-emerald-900/20' : 'bg-emerald-100/60'}`}>
+                    <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{emailResult.sent}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-500 mt-0.5">Delivered</p>
+                  </div>
+                  <div className={`p-3 rounded-xl ${darkMode ? 'bg-rose-900/20' : 'bg-rose-50'}`}>
+                    <p className="text-2xl font-black text-rose-500">{emailResult.failed}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-rose-600 mt-0.5">Failed</p>
+                  </div>
+                </div>
+                {emailResult.errors.length > 0 && (
+                  <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                    {emailResult.errors.slice(0, 5).map((e, i) => (
+                      <p key={i} className="text-[10px] font-mono text-rose-400">{e}</p>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setEmailResult(null)} className="mt-3 text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer">
+                  Send another email
+                </button>
+              </div>
+            )}
+
+            {!emailResult && (
+              <button
+                onClick={handleSendEmail}
+                disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-bold text-xs uppercase tracking-wider cursor-pointer transition-colors flex items-center justify-center gap-2"
+              >
+                {sendingEmail ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sending emails...
+                  </>
+                ) : (
+                  <>
+                    <Send size={13} />
+                    {emailMode === 'all' ? `Send to All ${allUsers.length} Students` : 'Send to Selected Emails'}
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* CSV IMPORT TAB */}
         {activeTab === 'import' && (
           <div className="p-5 space-y-5">
