@@ -33,6 +33,7 @@ interface CommunitiesSectionProps {
   onAddResource?: (communityId: string, title: string, link: string, description: string) => void;
   onAddThread?: (communityId: string, title: string, content: string) => void;
   onAddThreadReply?: (communityId: string, threadId: string, content: string) => void;
+  onCreateCommunity?: (community: { name: string; description: string; icon: string; tags: string[]; category: string }) => void;
 }
 
 export default function CommunitiesSection({
@@ -50,7 +51,8 @@ export default function CommunitiesSection({
   onViewUserProfile,
   onAddResource,
   onAddThread,
-  onAddThreadReply
+  onAddThreadReply,
+  onCreateCommunity
 }: CommunitiesSectionProps) {
   // Option to view a specific community's details
   const [activeCommunityId, setActiveCommunityId] = useState<string | null>(null);
@@ -79,6 +81,70 @@ export default function CommunitiesSection({
 
   // Reply input state
   const [replyText, setReplyText] = useState('');
+
+  // Create club modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createDesc, setCreateDesc] = useState('');
+  const [createCategory, setCreateCategory] = useState('Startups & Entrepreneurship');
+  const [createIcon, setCreateIcon] = useState('Users');
+  const [createTagInput, setCreateTagInput] = useState('');
+  const [createTags, setCreateTags] = useState<string[]>([]);
+
+  const ICON_OPTIONS = [
+    { name: 'Users', label: 'General' },
+    { name: 'Rocket', label: 'Startup' },
+    { name: 'Code', label: 'Coding' },
+    { name: 'Briefcase', label: 'Business' },
+    { name: 'BookOpen', label: 'Study' },
+    { name: 'GraduationCap', label: 'Academic' },
+    { name: 'Zap', label: 'Hackathon' },
+    { name: 'Heart', label: 'Wellness' },
+    { name: 'Globe', label: 'Network' },
+    { name: 'Cpu', label: 'Engineering' },
+    { name: 'Award', label: 'Competitive' },
+    { name: 'Palette', label: 'Creative' },
+    { name: 'TrendingUp', label: 'Growth' },
+    { name: 'Layers', label: 'Research' },
+    { name: 'Hash', label: 'Topic' },
+    { name: 'Database', label: 'Data' },
+  ];
+
+  const handleAddCreateTag = () => {
+    const tag = createTagInput.trim().replace(/^#/, '');
+    if (tag && !createTags.includes(tag) && createTags.length < 6) {
+      setCreateTags(prev => [...prev, tag]);
+      setCreateTagInput('');
+    }
+  };
+
+  const handleCreateTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      handleAddCreateTag();
+    }
+  };
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createName.trim() || !createDesc.trim()) return;
+    if (onCreateCommunity) {
+      onCreateCommunity({
+        name: createName.trim().toUpperCase(),
+        description: createDesc.trim(),
+        category: createCategory,
+        icon: createIcon,
+        tags: createTags.length > 0 ? createTags : [createCategory.split(' ')[0]],
+      });
+    }
+    setCreateName('');
+    setCreateDesc('');
+    setCreateCategory('Startups & Entrepreneurship');
+    setCreateIcon('Users');
+    setCreateTags([]);
+    setCreateTagInput('');
+    setShowCreateModal(false);
+  };
 
   // Map icon strings to Lucide components
   const renderIcon = (iconName: string) => {
@@ -831,6 +897,13 @@ export default function CommunitiesSection({
                     className={`w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-neutral-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${darkMode ? 'bg-[#0E0E12] text-white' : 'bg-white text-slate-800'}`}
                   />
                 </div>
+                <button
+                  id="btn-create-club"
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] uppercase font-extrabold tracking-wider rounded-xl cursor-pointer transition-all shadow-sm whitespace-nowrap"
+                >
+                  <Plus size={14} /> Create Club
+                </button>
 
                 {selectedTag && (
                   <button
@@ -993,6 +1066,173 @@ export default function CommunitiesSection({
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================== CREATE CLUB MODAL ======================== */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCreateModal(false); }}
+        >
+          <div className={`w-full max-w-lg rounded-2xl border shadow-2xl ${darkMode ? 'bg-[#0E0E12] border-white/10' : 'bg-white border-neutral-200'}`}>
+            {/* Modal Header */}
+            <div className={`px-6 pt-6 pb-4 border-b ${darkMode ? 'border-white/5' : 'border-neutral-100'} flex items-center justify-between`}>
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Users size={16} className="text-indigo-500" /> Start a New Club
+                </h2>
+                <p className={`text-[11px] mt-0.5 ${darkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
+                  Build a community around your idea, subject, or interest.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl leading-none font-bold cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleCreateSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              {/* Club Name */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Club Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={createName}
+                  onChange={e => setCreateName(e.target.value)}
+                  maxLength={60}
+                  placeholder="e.g. Quantum Computing Circle, Debate Society..."
+                  className={`w-full px-3.5 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-indigo-500 ${darkMode ? 'bg-[#121217] border-white/10 text-white placeholder:text-zinc-500' : 'bg-neutral-50 border-neutral-200 text-slate-800 placeholder:text-slate-400'}`}
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Description <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  value={createDesc}
+                  onChange={e => setCreateDesc(e.target.value)}
+                  rows={3}
+                  maxLength={300}
+                  placeholder="What is this club about? Who should join? What will members do together?"
+                  className={`w-full px-3.5 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none ${darkMode ? 'bg-[#121217] border-white/10 text-white placeholder:text-zinc-500' : 'bg-neutral-50 border-neutral-200 text-slate-800 placeholder:text-slate-400'}`}
+                />
+                <p className="text-[10px] text-slate-400 text-right">{createDesc.length}/300</p>
+              </div>
+
+              {/* Category */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Category <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={createCategory}
+                  onChange={e => setCreateCategory(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-indigo-500 ${darkMode ? 'bg-[#121217] border-white/10 text-white' : 'bg-neutral-50 border-neutral-200 text-slate-800'}`}
+                >
+                  {categoriesList.filter(c => c !== 'All').map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Icon Picker */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Icon
+                </label>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {ICON_OPTIONS.map(opt => (
+                    <button
+                      key={opt.name}
+                      type="button"
+                      onClick={() => setCreateIcon(opt.name)}
+                      title={opt.label}
+                      className={`p-2 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+                        createIcon === opt.name
+                          ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500'
+                          : `border-neutral-200 dark:border-white/10 ${darkMode ? 'hover:bg-zinc-800' : 'hover:bg-neutral-100'}`
+                      }`}
+                    >
+                      {renderIcon(opt.name)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400">Selected: <span className="font-bold text-indigo-500 dark:text-indigo-400">{ICON_OPTIONS.find(o => o.name === createIcon)?.label}</span></p>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Tags <span className="text-slate-400 font-normal normal-case">(up to 6)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={createTagInput}
+                    onChange={e => setCreateTagInput(e.target.value)}
+                    onKeyDown={handleCreateTagKeyDown}
+                    placeholder="e.g. DSA, Quantum, Finance..."
+                    className={`flex-1 px-3 py-2 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-indigo-500 ${darkMode ? 'bg-[#121217] border-white/10 text-white placeholder:text-zinc-500' : 'bg-neutral-50 border-neutral-200 text-slate-800 placeholder:text-slate-400'}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCreateTag}
+                    disabled={createTags.length >= 6}
+                    className="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-[10px] font-bold rounded-xl cursor-pointer transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                {createTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {createTags.map(tag => (
+                      <span
+                        key={tag}
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${darkMode ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-700'}`}
+                      >
+                        #{tag}
+                        <button
+                          type="button"
+                          onClick={() => setCreateTags(prev => prev.filter(t => t !== tag))}
+                          className="text-indigo-400 hover:text-rose-500 cursor-pointer transition-colors leading-none"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Submit */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className={`flex-1 py-2.5 rounded-xl border text-xs font-bold uppercase tracking-wider cursor-pointer transition-all ${darkMode ? 'border-white/10 text-slate-400 hover:bg-zinc-800' : 'border-neutral-200 text-slate-600 hover:bg-neutral-50'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!createName.trim() || !createDesc.trim()}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-extrabold uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus size={13} /> Launch Club
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

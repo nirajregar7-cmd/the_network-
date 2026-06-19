@@ -314,6 +314,18 @@ export default function App() {
     }));
   };
 
+  const handleCreateCommunity = (community: { name: string; description: string; icon: string; tags: string[]; category: string }) => {
+    if (!currentUser) return;
+    const newCommunity = {
+      ...community,
+      id: `custom-${Date.now()}`,
+      memberIds: [currentUser.id],
+      threads: [],
+      resources: [],
+    };
+    setCommunities(prev => [newCommunity, ...prev]);
+  };
+
   const handleAddCommunityResource = (communityId: string, title: string, link: string, description: string) => {
     if (!currentUser) return;
     setCommunities(prev => prev.map(c => {
@@ -881,6 +893,7 @@ export default function App() {
               onAddResource={handleAddCommunityResource}
               onAddThread={handleAddCommunityThread}
               onAddThreadReply={handleAddThreadReply}
+              onCreateCommunity={handleCreateCommunity}
             />
           )}
 
