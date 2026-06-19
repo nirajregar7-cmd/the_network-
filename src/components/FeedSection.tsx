@@ -72,7 +72,7 @@ export default function FeedSection({
   onReactToStory
 }: FeedSectionProps) {
   const [newPostContent, setNewPostContent] = useState('');
-  const [selectedTag, setSelectedTag] = useState('Life Update 🌿');
+  const [selectedTag, setSelectedTag] = useState('Startup Pitch 🚀');
   const [selectedCommunity, setSelectedCommunity] = useState(activeCommunityId || '');
   const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({});
   const [selectedFeeling, setSelectedFeeling] = useState<string>('');
@@ -85,28 +85,26 @@ export default function FeedSection({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const ACADEMIC_TAGS = [
-    'Life Update 🌿',
-    'Daily Mood 💭',
-    'Startup Co-Founder',
-    'Startup Discussion',
-    'Study Partner',
-    'Research Collaborator',
-    'Hackathon Team',
-    'General Networking',
-    'Career Guidance',
-    'Mentor Match'
+    'Startup Pitch 🚀',
+    'Co-Founder Search 🤝',
+    'Study Partner Wanted 📚',
+    'Idea Drop 💡',
+    'Research Collaborator 🔬',
+    'Hackathon Squad 💻',
+    'Mentor Match 🎓',
+    'Startup Discussion 💬'
   ];
 
   const FEELING_PRESETS = [
-    { emoji: '🚀', label: 'Motivated' },
-    { emoji: '😊', label: 'Happy' },
-    { emoji: '🧠', label: 'Focused' },
-    { emoji: '🤯', label: 'Stressed' },
-    { emoji: '😴', label: 'Tired' },
-    { emoji: '🔥', label: 'Inspired' },
-    { emoji: '🌿', label: 'Chill' },
-    { emoji: '🎉', label: 'Excited' },
-    { emoji: '💭', label: 'Thoughtful' }
+    { emoji: '🚀', label: 'Building' },
+    { emoji: '💡', label: 'Ideating' },
+    { emoji: '🔥', label: 'Hustling' },
+    { emoji: '🧠', label: 'Deep Work' },
+    { emoji: '🤝', label: 'Networking' },
+    { emoji: '📈', label: 'Grinding' },
+    { emoji: '🤯', label: 'Pivoting' },
+    { emoji: '🎯', label: 'Focused' },
+    { emoji: '💭', label: 'Brainstorming' }
   ];
 
   const campusEvents = [
@@ -264,7 +262,7 @@ export default function FeedSection({
                   id="feed-post-input"
                   rows={2}
                   required
-                  placeholder={`How is your life going? Share a quick update, pitch, photo, or select your vibe, ${currentUser.fullName.split(' ')[0]}...`}
+                  placeholder={`What are you building, ${currentUser.fullName.split(' ')[0]}? Pitch an idea, find a co-founder, or post a study group request...`}
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                   className={`w-full p-2.5 text-xs rounded-xl border border-neutral-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none transition-all ${darkMode ? 'bg-[#09090C] text-slate-100' : 'bg-neutral-50 text-slate-900'}`}
@@ -275,7 +273,7 @@ export default function FeedSection({
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-zinc-500 flex items-center gap-1">
                       <Sparkle size={10} className="text-pink-500 animate-spin-slow" />
-                      <span>How's life going? / Current status vibe</span>
+                      <span>Builder status / What mode are you in?</span>
                     </span>
                     {selectedFeeling && (
                       <button

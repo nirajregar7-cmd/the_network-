@@ -66,26 +66,26 @@ const STOCK_PRESETS = [
 ];
 
 const ACTIVE_ACADEMIC_TAGS = [
-  'Life Update 🌿',
-  'Daily Mood 💭',
-  'Startup Co-Founder',
-  'Startup Discussion',
-  'Study Partner',
-  'Research Partner',
-  'Hackathon Squad',
-  'Mentor Match'
+  'Startup Pitch 🚀',
+  'Co-Founder Search 🤝',
+  'Study Partner Wanted 📚',
+  'Idea Drop 💡',
+  'Research Collaborator 🔬',
+  'Hackathon Squad 💻',
+  'Mentor Match 🎓',
+  'Startup Discussion 💬'
 ];
 
 const ACTIVE_FEELING_PRESETS = [
-  { emoji: '🚀', label: 'Motivated' },
-  { emoji: '😊', label: 'Happy' },
-  { emoji: '🧠', label: 'Focused' },
-  { emoji: '🤯', label: 'Stressed' },
-  { emoji: '😴', label: 'Tired' },
-  { emoji: '🔥', label: 'Inspired' },
-  { emoji: '🌿', label: 'Chill' },
-  { emoji: '🎉', label: 'Excited' },
-  { emoji: '💭', label: 'Thoughtful' }
+  { emoji: '🚀', label: 'Building' },
+  { emoji: '💡', label: 'Ideating' },
+  { emoji: '🔥', label: 'Hustling' },
+  { emoji: '🧠', label: 'Deep Work' },
+  { emoji: '🤝', label: 'Networking' },
+  { emoji: '📈', label: 'Grinding' },
+  { emoji: '🤯', label: 'Pivoting' },
+  { emoji: '🎯', label: 'Focused' },
+  { emoji: '💭', label: 'Brainstorming' }
 ];
 
 export default function App() {
@@ -154,7 +154,7 @@ export default function App() {
 
   // New Post Modal Fields State
   const [modalPostContent, setModalPostContent] = useState('');
-  const [modalSelectedTag, setModalSelectedTag] = useState('Life Update 🌿');
+  const [modalSelectedTag, setModalSelectedTag] = useState('Startup Pitch 🚀');
   const [modalSelectedFeeling, setModalSelectedFeeling] = useState('');
   const [modalSelectedCommunity, setModalSelectedCommunity] = useState('');
   const [modalProjectTitle, setModalProjectTitle] = useState('');
@@ -425,7 +425,7 @@ export default function App() {
 
     // Reset standard states
     setModalPostContent('');
-    setModalSelectedTag('Life Update 🌿');
+    setModalSelectedTag('Startup Pitch 🚀');
     setModalSelectedFeeling('');
     setModalSelectedCommunity('');
     setModalProjectTitle('');
@@ -1083,8 +1083,8 @@ export default function App() {
                     <Sparkles size={14} />
                   </div>
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider">Share Life Update / Status Vibe</h3>
-                    <p className="text-[9.5px] text-slate-400 dark:text-zinc-500">Reach peer minds across the networks instantly</p>
+                    <h3 className="text-xs font-black uppercase tracking-wider">Launch a Pitch / Find a Collaborator</h3>
+                    <p className="text-[9.5px] text-slate-400 dark:text-zinc-500">Reach co-founders, study partners & mentors instantly</p>
                   </div>
                 </div>
                 <button
@@ -1101,11 +1101,11 @@ export default function App() {
                 
                 {/* Content Input Box */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">What is happening in your life? <span className="text-rose-500">*</span></label>
+                  <label className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500">What are you building or looking for? <span className="text-rose-500">*</span></label>
                   <textarea
                     required
                     rows={3}
-                    placeholder="Describe a breakthrough, share your daily thoughts, announce academic project ideas, or post an internship update..."
+                    placeholder="Pitch your startup idea, describe the co-founder you need, post a study group request, or share a research opportunity..."
                     value={modalPostContent}
                     onChange={(e) => setModalPostContent(e.target.value)}
                     className={`w-full p-3 rounded-xl border focus:ring-1 focus:ring-indigo-500 focus:outline-none resize-none transition-all text-xs ${darkMode ? 'bg-[#09090C] border-white/5 text-slate-100' : 'bg-neutral-50 border-neutral-200 text-slate-900'}`}
@@ -1114,7 +1114,7 @@ export default function App() {
 
                 {/* Vibe Feeling Ticker Status */}
                 <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500 block">How are you doing today? Select current status vibe:</span>
+                  <span className="text-[10px] uppercase tracking-wide font-extrabold text-slate-400 dark:text-zinc-500 block">Current builder status — what mode are you in?</span>
                   <div className="flex flex-wrap gap-1.5">
                     {ACTIVE_FEELING_PRESETS.map((preset) => {
                       const feelingString = `${preset.emoji} ${preset.label}`;
