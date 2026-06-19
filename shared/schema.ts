@@ -98,6 +98,8 @@ export const communities = pgTable('communities', {
   category: text('category').notNull().default('General'),
   threads: jsonb('threads').notNull().default([]),
   resources: jsonb('resources').notNull().default([]),
+  college: text('college'),
+  creatorId: text('creator_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

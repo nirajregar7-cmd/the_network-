@@ -422,7 +422,7 @@ app.get('/api/communities', async (_req, res) => {
 
 app.post('/api/communities', async (req, res) => {
   try {
-    const { name, description, icon, tags, category, creatorId } = req.body;
+    const { name, description, icon, tags, category, creatorId, college } = req.body;
     const newComm = await db.insert(communities).values({
       id: generateId('comm'),
       name, description,
@@ -432,6 +432,8 @@ app.post('/api/communities', async (req, res) => {
       category: category || 'General',
       threads: [],
       resources: [],
+      college: college || null,
+      creatorId: creatorId || null,
     }).returning();
     return res.json({ ...newComm[0], createdAt: newComm[0].createdAt.toISOString() });
   } catch (err: any) {
@@ -441,15 +443,28 @@ app.post('/api/communities', async (req, res) => {
 
 app.put('/api/communities/:id', async (req, res) => {
   try {
-    const { memberIds, threads, resources } = req.body;
+    const { memberIds, threads, resources, name, description, tags, category } = req.body;
     const found = await db.select().from(communities).where(eq(communities.id, req.params.id));
     if (!found.length) return res.status(404).json({ error: 'Community not found' });
     const updated = await db.update(communities).set({
       memberIds: memberIds ?? found[0].memberIds,
       threads: threads ?? found[0].threads,
       resources: resources ?? found[0].resources,
+      name: name ?? found[0].name,
+      description: description ?? found[0].description,
+      tags: tags ?? found[0].tags,
+      category: category ?? found[0].category,
     }).where(eq(communities.id, req.params.id)).returning();
     return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/communities/:id', async (req, res) => {
+  try {
+    await db.delete(communities).where(eq(communities.id, req.params.id));
+    return res.json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

@@ -83,6 +83,8 @@ export interface Community {
   category: string; // Engineering, Startups, Medical, Management, etc.
   threads?: DiscussionThread[];
   resources?: ResourceItem[];
+  college?: string | null;  // null = campus-wide; set = college-specific club
+  creatorId?: string | null;
 }
 
 export interface DiscussionThread {

@@ -62,6 +62,7 @@ export const api = {
     getAll: () => get('/communities'),
     create: (data: any) => post('/communities', data),
     update: (id: string, data: any) => put(`/communities/${id}`, data),
+    delete: (id: string) => del(`/communities/${id}`),
     seed: (chapters: any[]) => post('/seed/communities', { chapters }),
   },
   stories: {
