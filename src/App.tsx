@@ -606,7 +606,7 @@ export default function App() {
   ).length;
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
+    <div className={`min-h-screen w-full overflow-x-hidden flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
       {/* Main Top Header Block of Editorial Mockup */}
       <header className="border-b border-neutral-200 dark:border-white/10 px-6 lg:px-8 py-3.5 flex items-center justify-between transition-all sticky top-0 z-30 backdrop-blur-md" style={{ backgroundColor: 'var(--t-header)' }}>

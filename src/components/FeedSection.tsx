@@ -216,14 +216,14 @@ export default function FeedSection({
         />
 
         {/* Compact Mobile Events Slider Card - ONLY visible on smaller screens (upper side) */}
-        <div className="block lg:hidden rounded-2xl border border-neutral-200/80 dark:border-white/10 p-4 shadow-sm bg-gradient-to-tr from-indigo-50/10 to-indigo-500/5 dark:from-indigo-950/20 dark:to-transparent">
+        <div className="block lg:hidden rounded-2xl border border-neutral-200/80 dark:border-white/10 p-4 shadow-sm overflow-hidden bg-gradient-to-tr from-indigo-50/10 to-indigo-500/5 dark:from-indigo-950/20 dark:to-transparent">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500 dark:text-indigo-400 flex items-center gap-1">
               <Calendar size={12} /> Live Campus Events
             </span>
             <span className="text-[9px] font-mono opacity-50">{campusEvents.length} Sessions</span>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
             {campusEvents.map((event) => {
               const isJoined = registeredEvents.includes(event.id);
               return (
