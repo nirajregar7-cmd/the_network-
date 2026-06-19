@@ -215,34 +215,32 @@ export default function FeedSection({
           onReactToStory={onReactToStory}
         />
 
-        {/* Compact Mobile Events Card - stacked, no horizontal scroll */}
-        <div className="block lg:hidden rounded-2xl border border-neutral-200/80 dark:border-white/10 p-4 shadow-sm bg-gradient-to-tr from-indigo-50/10 to-indigo-500/5 dark:from-indigo-950/20 dark:to-transparent">
+        {/* Compact Mobile Events Slider — horizontal, scrollbar hidden */}
+        <div className="block lg:hidden rounded-2xl border border-neutral-200/80 dark:border-white/10 p-4 shadow-sm overflow-hidden bg-gradient-to-tr from-indigo-50/10 to-indigo-500/5 dark:from-indigo-950/20 dark:to-transparent">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500 dark:text-indigo-400 flex items-center gap-1">
               <Calendar size={12} /> Live Campus Events
             </span>
             <span className="text-[9px] font-mono opacity-50">{campusEvents.length} Sessions</span>
           </div>
-          <div className="space-y-2">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
             {campusEvents.map((event) => {
               const isJoined = registeredEvents.includes(event.id);
               return (
-                <div key={event.id} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${darkMode ? 'bg-zinc-950 border-white/5' : 'bg-white border-neutral-250/60'}`}>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="px-1.5 py-0.5 rounded text-[7.5px] font-bold uppercase tracking-tight bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/25 shrink-0">
-                        {event.label}
-                      </span>
-                      <span className="text-[8.5px] opacity-50 font-mono truncate">{event.date}</span>
-                    </div>
-                    <h4 className="text-[11px] font-bold truncate text-slate-800 dark:text-white">{event.title}</h4>
+                <div key={event.id} className={`shrink-0 w-52 p-3 rounded-xl border ${darkMode ? 'bg-zinc-950 border-white/5' : 'bg-white border-neutral-250/60'}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="px-1.5 py-0.5 rounded text-[7.5px] font-bold uppercase tracking-tight bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/25">
+                      {event.label}
+                    </span>
+                    <span className="text-[8.5px] opacity-50 font-mono">{event.date}</span>
                   </div>
+                  <h4 className="text-[11px] font-bold truncate text-slate-800 dark:text-white mb-2">{event.title}</h4>
                   <button
                     onClick={() => onRegisterEvent?.(event.id)}
                     disabled={isJoined}
-                    className={`shrink-0 px-3 py-1.5 text-[9px] font-bold uppercase rounded-lg transition-all ${isJoined ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-default' : 'bg-indigo-500 text-white hover:bg-indigo-600 cursor-pointer'}`}
+                    className={`w-full text-center py-1.5 text-[9px] font-bold uppercase rounded-lg transition-all ${isJoined ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-default' : 'bg-indigo-500 text-white hover:bg-indigo-600 cursor-pointer'}`}
                   >
-                    {isJoined ? '✓ Reserved' : 'Reserve'}
+                    {isJoined ? '✓ Reserved' : 'Reserve Seat'}
                   </button>
                 </div>
               );
@@ -313,7 +311,7 @@ export default function FeedSection({
                 </div>
 
                 {/* Real-time media attachments tray */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -322,24 +320,22 @@ export default function FeedSection({
                         setImageUploadType('upload');
                       }
                     }}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer bg-transparent border-0"
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 hover:text-indigo-500 transition-colors py-1 cursor-pointer bg-transparent border-0 shrink-0"
                   >
                     <ImageIcon size={13} className="text-pink-500" />
-                    <span>{showMediaOptions ? 'Hide Attachments ↑' : 'Attach Photo/Showcase pitch ↓'}</span>
+                    <span>{showMediaOptions ? 'Hide ↑' : 'Attach Media ↓'}</span>
                   </button>
 
-                  <div className="flex items-center gap-2">
-                    <select
-                      id="feed-tag-select"
-                      value={selectedTag}
-                      onChange={(e) => setSelectedTag(e.target.value)}
-                      className={`text-[9.5px] font-bold uppercase px-2.5 py-1 rounded-lg border border-neutral-250 dark:border-white/10 focus:outline-none cursor-pointer ${darkMode ? 'bg-[#09090C] text-slate-300' : 'bg-white text-slate-700'}`}
-                    >
-                      {ACADEMIC_TAGS.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <select
+                    id="feed-tag-select"
+                    value={selectedTag}
+                    onChange={(e) => setSelectedTag(e.target.value)}
+                    className={`max-w-[150px] text-[9.5px] font-bold uppercase px-2 py-1 rounded-lg border border-neutral-250 dark:border-white/10 focus:outline-none cursor-pointer shrink-0 ${darkMode ? 'bg-[#09090C] text-slate-300' : 'bg-white text-slate-700'}`}
+                  >
+                    {ACADEMIC_TAGS.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Expandable media attachment area */}
