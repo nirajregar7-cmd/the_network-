@@ -230,7 +230,7 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
               <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Email Address</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><Mail size={15} /></span>
-                <input type="email" required placeholder="you@university.edu" value={email} onChange={e => setEmail(e.target.value)} className={input} />
+                <input type="email" required placeholder="you@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className={input} />
               </div>
             </div>
             <button type="submit" disabled={loading} className="w-full mt-2 py-2.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white font-extrabold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer">
@@ -301,7 +301,7 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
               <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Email Address</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><Mail size={15} /></span>
-                <input type="email" required placeholder="you@university.edu" value={email} onChange={e => setEmail(e.target.value)} className={input} />
+                <input type="email" required placeholder="you@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className={input} />
               </div>
             </div>
 
