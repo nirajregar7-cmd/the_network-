@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Download, X, Smartphone } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -14,19 +13,22 @@ export default function InstallPrompt({ darkMode }: Props) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [installed, setInstalled] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Already installed as standalone
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true);
+      return;
+    }
+    if (sessionStorage.getItem('pwa-prompt-dismissed')) {
+      setDismissed(true);
       return;
     }
 
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      // Show after 3 seconds
-      setTimeout(() => setShow(true), 3000);
+      setTimeout(() => setShow(true), 2500);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
@@ -47,31 +49,153 @@ export default function InstallPrompt({ darkMode }: Props) {
     setShow(false);
   };
 
-  if (installed || !show || !deferredPrompt) return null;
+  const handleDismiss = () => {
+    sessionStorage.setItem('pwa-prompt-dismissed', '1');
+    setDismissed(true);
+    setShow(false);
+  };
+
+  if (installed || dismissed || !show || !deferredPrompt) return null;
 
   return (
-    <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm rounded-2xl shadow-2xl border p-4 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300 ${darkMode ? 'bg-[#121217] border-white/10 text-white' : 'bg-white border-neutral-200 text-slate-900'}`}>
-      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-        <Smartphone size={22} className="text-white" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-bold leading-tight">Install The Network</p>
-        <p className="text-[11px] text-slate-400 mt-0.5">Add to your phone for the full app experience</p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        onClick={handleDismiss}
+      />
+
+      {/* Bottom sheet */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center"
+        style={{
+          background: 'linear-gradient(160deg, #1a0d2e 0%, #0d0d14 60%, #000000 100%)',
+          borderRadius: '24px 24px 0 0',
+          padding: '12px 24px 40px',
+          boxShadow: '0 -8px 48px rgba(109,40,217,0.25)',
+          maxWidth: 480,
+          margin: '0 auto',
+        }}
+      >
+        {/* Drag handle */}
+        <div
+          style={{
+            width: 40,
+            height: 4,
+            borderRadius: 2,
+            background: 'rgba(255,255,255,0.25)',
+            marginBottom: 24,
+          }}
+        />
+
+        {/* App icon */}
+        <div
+          style={{
+            width: 96,
+            height: 96,
+            borderRadius: 22,
+            overflow: 'hidden',
+            marginBottom: 20,
+            boxShadow: '0 4px 24px rgba(109,40,217,0.5)',
+            border: '2px solid rgba(109,40,217,0.4)',
+          }}
+        >
+          <img
+            src="/icons/icon-192x192.png"
+            alt="The Network"
+            style={{ width: '100%', height: '100%', display: 'block' }}
+          />
+        </div>
+
+        {/* Title */}
+        <h2
+          style={{
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: 22,
+            margin: '0 0 10px',
+            textAlign: 'center',
+            letterSpacing: '-0.3px',
+          }}
+        >
+          Install The Network
+        </h2>
+
+        {/* Subtitle */}
+        <p
+          style={{
+            color: 'rgba(255,255,255,0.55)',
+            fontSize: 14,
+            textAlign: 'center',
+            margin: '0 0 24px',
+            lineHeight: 1.5,
+            maxWidth: 300,
+          }}
+        >
+          Get the full app experience — faster, offline-ready, and on your home screen like a real app.
+        </p>
+
+        {/* Feature bullets */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+          {[
+            { emoji: '⚡', text: 'Loads faster than the browser' },
+            { emoji: '🔔', text: 'Real-time message notifications' },
+            { emoji: '🔒', text: 'Private & secure — always' },
+          ].map(({ emoji, text }) => (
+            <div
+              key={text}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                background: 'rgba(255,255,255,0.06)',
+                borderRadius: 14,
+                padding: '13px 16px',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}
+            >
+              <span style={{ fontSize: 20 }}>{emoji}</span>
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 500 }}>{text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Install button */}
         <button
           onClick={handleInstall}
-          className="px-3 py-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-[11px] font-bold transition-all cursor-pointer border-0 flex items-center gap-1"
+          style={{
+            width: '100%',
+            padding: '16px 0',
+            borderRadius: 16,
+            background: 'linear-gradient(90deg, #7c3aed 0%, #6d28d9 50%, #4f46e5 100%)',
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: 16,
+            border: 'none',
+            cursor: 'pointer',
+            letterSpacing: '0.2px',
+            boxShadow: '0 4px 20px rgba(109,40,217,0.5)',
+            marginBottom: 16,
+          }}
         >
-          <Download size={12} /> Install
+          📲 Install App — Free
         </button>
+
+        {/* Dismiss */}
         <button
-          onClick={() => setShow(false)}
-          className={`p-1.5 rounded-lg transition-all cursor-pointer border-0 ${darkMode ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-neutral-100 text-slate-400'}`}
+          onClick={handleDismiss}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'rgba(255,255,255,0.4)',
+            fontSize: 14,
+            cursor: 'pointer',
+            padding: '4px 8px',
+          }}
         >
-          <X size={14} />
+          Not now
         </button>
       </div>
-    </div>
+    </>
   );
 }
