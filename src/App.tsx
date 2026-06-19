@@ -12,6 +12,8 @@ import CommunitiesSection from './components/CommunitiesSection';
 import ProfileSection from './components/ProfileSection';
 import AdminSection from './components/AdminSection';
 import Avatar from './components/Avatar';
+import InstallPrompt from './components/InstallPrompt';
+import NotificationSetup from './components/NotificationSetup';
 
 import {
   GraduationCap,
@@ -1298,6 +1300,8 @@ export default function App() {
         );
       })()}
 
+    <InstallPrompt darkMode={darkMode} />
+    {currentUser && <NotificationSetup userId={currentUser.id} darkMode={darkMode} />}
     </div>
   );
 }

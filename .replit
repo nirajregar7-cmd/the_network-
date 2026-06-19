@@ -76,3 +76,10 @@ deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 publicDir = "dist"
 run = ["npm", "run", "start"]
+
+[userenv]
+
+[userenv.shared]
+VAPID_PUBLIC_KEY = "BMFhS7bR4UacelWJY8tepeccTdJW-FXMCDnFsNwzpWuyRS3n_-ayeRde3XSIvLt83L5WssZXn44RMcL5zPzQxhQ"
+VAPID_PRIVATE_KEY = "E6qDXPRcyZ9IB2nOOe15bPSWeyLGNyXlOLW54RHAUK0"
+VAPID_EMAIL = "mailto:admin@thenetwork.app"

@@ -3,11 +3,35 @@ import cors from 'cors';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import webpush from 'web-push';
 import { db } from './db.js';
 import {
-  users, posts, comments, connections, messages, communities, stories, reports
+  users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
+
+// ── VAPID setup ───────────────────────────────────────────────────────────────
+const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || 'BMFhS7bR4UacelWJY8tepeccTdJW-FXMCDnFsNwzpWuyRS3n_-ayeRde3XSIvLt83L5WssZXn44RMcL5zPzQxhQ';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'E6qDXPRcyZ9IB2nOOe15bPSWeyLGNyXlOLW54RHAUK0';
+const VAPID_EMAIL   = process.env.VAPID_EMAIL       || 'mailto:admin@thenetwork.app';
+webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+
+async function sendPushToUser(userId: string, payload: object) {
+  try {
+    const subs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
+    const msg = JSON.stringify(payload);
+    await Promise.allSettled(
+      subs.map(s =>
+        webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, msg)
+          .catch(async (err: any) => {
+            if (err.statusCode === 410 || err.statusCode === 404) {
+              await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, s.endpoint));
+            }
+          })
+      )
+    );
+  } catch {}
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -196,11 +220,23 @@ app.post('/api/posts/:id/like', async (req, res) => {
     if (!found.length) return res.status(404).json({ error: 'Post not found' });
     const post = found[0];
     const likesArr = (post.likes as string[]) || [];
-    const newLikes = likesArr.includes(userId)
-      ? likesArr.filter(id => id !== userId)
-      : [...likesArr, userId];
+    const isLiking = !likesArr.includes(userId);
+    const newLikes = isLiking ? [...likesArr, userId] : likesArr.filter(id => id !== userId);
     const updated = await db.update(posts).set({ likes: newLikes }).where(eq(posts.id, req.params.id)).returning();
     const postComments = await db.select().from(comments).where(eq(comments.postId, req.params.id));
+    // Push notification to post author
+    if (isLiking && post.authorId !== userId) {
+      const liker = await db.select().from(users).where(eq(users.id, userId));
+      if (liker.length) {
+        sendPushToUser(post.authorId, {
+          title: '❤️ New Like',
+          body: `${liker[0].fullName} liked your post`,
+          icon: '/icons/icon-192x192.png',
+          tag: `like-${req.params.id}`,
+          url: '/',
+        });
+      }
+    }
     return res.json(toPost(updated[0], postComments));
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -241,6 +277,17 @@ app.post('/api/connections', async (req, res) => {
       senderId, receiverId, type, message: message || '',
       status: 'pending',
     }).returning();
+    // Push notification to receiver
+    const sender = await db.select().from(users).where(eq(users.id, senderId));
+    if (sender.length) {
+      sendPushToUser(receiverId, {
+        title: '🤝 Connection Request',
+        body: `${sender[0].fullName} wants to connect with you`,
+        icon: '/icons/icon-192x192.png',
+        tag: `conn-${senderId}`,
+        url: '/',
+      });
+    }
     return res.json({ ...newConn[0], createdAt: newConn[0].createdAt.toISOString() });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -276,6 +323,17 @@ app.post('/api/messages', async (req, res) => {
       senderId, receiverId, content,
       isRead: false,
     }).returning();
+    // Push notification to receiver
+    const sender = await db.select().from(users).where(eq(users.id, senderId));
+    if (sender.length) {
+      sendPushToUser(receiverId, {
+        title: `💬 ${sender[0].fullName}`,
+        body: content.length > 80 ? content.substring(0, 80) + '…' : content,
+        icon: '/icons/icon-192x192.png',
+        tag: `msg-${senderId}`,
+        url: '/',
+      });
+    }
     return res.json({ ...newMsg[0], createdAt: newMsg[0].createdAt.toISOString() });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -439,6 +497,32 @@ app.post('/api/seed/communities', async (req, res) => {
       }))
     ).returning();
     return res.json({ seeded: inserted.length });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PUSH SUBSCRIPTIONS ───────────────────────────────────────────────────────
+
+app.post('/api/push/subscribe', async (req, res) => {
+  try {
+    const { userId, endpoint, p256dh, auth } = req.body;
+    if (!userId || !endpoint || !p256dh || !auth) return res.status(400).json({ error: 'Missing fields' });
+    await db.insert(pushSubscriptions).values({
+      id: generateId('psub'),
+      userId, endpoint, p256dh, auth,
+    }).onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: { userId, p256dh, auth } });
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/push/subscribe', async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+    return res.json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
