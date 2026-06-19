@@ -170,9 +170,22 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === 'login' && !password) { setError('Enter your password.'); return; }
+    if (mode === 'login') {
+      if (!email) { setError('Enter your email.'); return; }
+      if (!password) { setError('Enter your password.'); return; }
+      setLoading(true); setError('');
+      try {
+        const { user } = await api.auth.login(email, password);
+        onLogin(user);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     if (mode === 'register' && (!password || password.length < 6)) {
       setError('Password must be at least 6 characters.'); return;
     }
@@ -324,9 +337,9 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
 
             <button type="submit" disabled={loading} className="w-full mt-2 py-2.5 px-4 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white font-extrabold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer">
               {loading ? (
-                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending OTP...</>
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> {mode === 'login' ? 'Signing in...' : 'Sending OTP...'}</>
               ) : (
-                <>{mode === 'login' ? 'Send OTP to Email' : 'Create Account & Send OTP'} <ArrowRight size={14} /></>
+                <>{mode === 'login' ? 'Sign In' : 'Create Account & Send OTP'} <ArrowRight size={14} /></>
               )}
             </button>
 
