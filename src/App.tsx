@@ -95,6 +95,7 @@ export default function App() {
   const [reports, setReports] = useState<UserReport[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionRestored, setSessionRestored] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [theme, setTheme] = useState<ThemeName>(() => {
@@ -125,7 +126,42 @@ export default function App() {
     setProfileLookingForExpanded(false);
   }, [viewingUserProfileId]);
 
-  // Notifications polling (every 25s)
+  // ── Restore session from localStorage on page load ────────────────────────
+  useEffect(() => {
+    const savedId = localStorage.getItem('network_uid');
+    if (!savedId) { setSessionRestored(true); return; }
+    api.users.getById(savedId)
+      .then((user: UserProfile) => {
+        if (user && !user.isSuspended) setCurrentUser(user);
+        else localStorage.removeItem('network_uid');
+      })
+      .catch(() => localStorage.removeItem('network_uid'))
+      .finally(() => setSessionRestored(true));
+  }, []);
+
+  // ── Read ?view= URL param on load (from push notification click) ──────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    if (view) {
+      setActiveView(view);
+      // Clean URL without reload
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // ── Listen for SW_NAVIGATE messages (push notification click in open app) ─
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'SW_NAVIGATE' && e.data.view) {
+        setActiveView(e.data.view);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => navigator.serviceWorker?.removeEventListener('message', handler);
+  }, []);
+
+  // ── Notifications polling (every 25s) ─────────────────────────────────────
   useEffect(() => {
     if (!currentUser) return;
     const fetchNotifs = () => api.notifications.getForUser(currentUser.id).catch(() => null);
@@ -183,6 +219,7 @@ export default function App() {
     !user.aboutMe && user.interests.length === 0 && user.skills.length === 0 && user.lookingFor.length === 0;
 
   const handleLogin = (user: UserProfile) => {
+    localStorage.setItem('network_uid', user.id);
     setCurrentUser(user);
     setAllUsers(prev => {
       if (prev.some(u => u.id === user.id)) {
@@ -207,6 +244,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('network_uid');
     setCurrentUser(null);
     setActiveView('feed');
   };
@@ -518,12 +556,12 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !sessionRestored) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-[#09090C] text-white' : 'bg-neutral-50 text-slate-900'}`}>
         <div className="text-center">
           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm font-mono text-slate-400">Connecting to database...</p>
+          <p className="text-sm font-mono text-slate-400">Loading...</p>
         </div>
       </div>
     );

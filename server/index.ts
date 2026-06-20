@@ -274,7 +274,7 @@ app.post('/api/posts/:id/like', async (req, res) => {
           body: `${liker[0].fullName} liked your post`,
           icon: '/icons/icon-192x192.png',
           tag: `like-${req.params.id}`,
-          url: '/',
+          view: 'feed',
         });
         await createNotification(post.authorId, userId, 'like', '❤️ New Like', `${liker[0].fullName} liked your post`);
       }
@@ -334,7 +334,7 @@ app.post('/api/connections', async (req, res) => {
         body: `${sender[0].fullName} wants to connect with you`,
         icon: '/icons/icon-192x192.png',
         tag: `conn-${senderId}`,
-        url: '/',
+        view: 'dashboard',
       });
       await createNotification(receiverId, senderId, 'connection_request', '🤝 Connection Request', `${sender[0].fullName} wants to connect with you`);
     }
@@ -389,7 +389,7 @@ app.post('/api/messages', async (req, res) => {
         body: content.length > 80 ? content.substring(0, 80) + '…' : content,
         icon: '/icons/icon-192x192.png',
         tag: `msg-${senderId}`,
-        url: '/',
+        view: 'messages',
       });
     }
     return res.json({ ...newMsg[0], createdAt: newMsg[0].createdAt.toISOString() });
