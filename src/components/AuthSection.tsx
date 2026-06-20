@@ -529,6 +529,23 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
           </form>
         )}
 
+        {/* Promo video link */}
+        {step === 'form' && (mode === 'login' || mode === 'register') && (
+          <div className="mt-5 pt-4 border-t border-neutral-200 dark:border-white/5 text-center">
+            <a
+              href="/video"
+              className="inline-flex items-center gap-2 text-[11px] font-semibold text-indigo-500 hover:text-indigo-400 transition-colors group"
+            >
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-500/15 group-hover:bg-indigo-500/25 transition-colors">
+                <svg width="8" height="9" viewBox="0 0 8 9" fill="currentColor">
+                  <path d="M1 1.5L7 4.5L1 7.5V1.5Z"/>
+                </svg>
+              </span>
+              Watch the product video
+            </a>
+          </div>
+        )}
+
       </div>
     </div>
   );
