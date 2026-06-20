@@ -10,5 +10,9 @@ if (!connectionString) {
   throw new Error('NEON_DATABASE_URL must be set.');
 }
 
-export const pool = new Pool({ connectionString });
+export const pool = new Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false },
+});
+
 export const db = drizzle(pool, { schema });
