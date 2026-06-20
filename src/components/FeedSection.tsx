@@ -18,7 +18,8 @@ import {
   MapPin,
   X,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  Share2
 } from 'lucide-react';
 import StoriesBubbleTray from './StoriesBubbleTray';
 import Avatar from './Avatar';
@@ -630,6 +631,26 @@ export default function FeedSection({
                         <MessageCircle size={15} />
                         <span className="text-[10px] font-bold font-mono tracking-tighter">{post.comments.length} Comments</span>
                       </div>
+
+                      <button
+                        onClick={async () => {
+                          const shareData = {
+                            title: `Post by ${post.author?.fullName ?? 'someone'} on The Network`,
+                            text: post.content.length > 100 ? post.content.substring(0, 100) + '…' : post.content,
+                            url: window.location.href,
+                          };
+                          if (navigator.share) {
+                            try { await navigator.share(shareData); } catch (_) {}
+                          } else {
+                            await navigator.clipboard.writeText(window.location.href);
+                            alert('Link copied!');
+                          }
+                        }}
+                        className="flex items-center gap-1.5 text-[#8E8E8F] hover:text-indigo-500 transition-colors cursor-pointer border-0 bg-transparent ml-auto"
+                      >
+                        <Share2 size={14} />
+                        <span className="text-[10px] font-bold font-mono tracking-tighter">Share</span>
+                      </button>
                     </div>
 
                     {/* Comment Feed list */}
@@ -639,7 +660,7 @@ export default function FeedSection({
                         if (!commAuthor || commAuthor.isSuspended) return null;
 
                         return (
-                          <div key={comment.id} className="text-[11px] leading-relaxed flex items-start gap-1.5">
+                          <div key={comment.id} className="text-[11px] leading-relaxed flex items-start gap-1.5 min-w-0 overflow-hidden">
                             <span 
                               onClick={() => onViewUserProfile && onViewUserProfile(commAuthor.id)}
                               className={`font-extrabold shrink-0 transition-all ${
@@ -649,7 +670,7 @@ export default function FeedSection({
                             >
                               {commAuthor.fullName.split(' ')[0]}:
                             </span>
-                            <span className={`${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                            <span className={`break-words min-w-0 overflow-hidden ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                               {comment.content}
                             </span>
                           </div>
