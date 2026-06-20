@@ -6,6 +6,7 @@ import { Bell, Heart, MessageCircle, UserPlus, UserCheck, MessageSquare, X, Chec
 interface NotificationsDropdownProps {
   userId: string;
   darkMode: boolean;
+  onNavigate: (view: string, actorId?: string) => void;
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
@@ -15,6 +16,13 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
   connection_accepted: <UserCheck size={14} className="text-emerald-500" />,
   message: <MessageSquare size={14} className="text-violet-500" />,
 };
+
+function viewForType(type: string): string {
+  if (type === 'message') return 'messages';
+  if (type === 'like' || type === 'comment') return 'feed';
+  if (type === 'connection_request' || type === 'connection_accepted') return 'dashboard';
+  return 'feed';
+}
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -26,7 +34,7 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function NotificationsDropdown({ userId, darkMode }: NotificationsDropdownProps) {
+export default function NotificationsDropdown({ userId, darkMode, onNavigate }: NotificationsDropdownProps) {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,6 +79,14 @@ export default function NotificationsDropdown({ userId, darkMode }: Notification
     await api.notifications.markAllRead(userId);
     setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
     setLoading(false);
+  };
+
+  const handleNotifClick = async (n: Notification) => {
+    await markRead(n.id);
+    setOpen(false);
+    const view = viewForType(n.type);
+    const actorId = n.type === 'message' ? n.actorId : undefined;
+    onNavigate(view, actorId);
   };
 
   return (
@@ -132,7 +148,7 @@ export default function NotificationsDropdown({ userId, darkMode }: Notification
               notifs.map(n => (
                 <button
                   key={n.id}
-                  onClick={() => markRead(n.id)}
+                  onClick={() => handleNotifClick(n)}
                   className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-all cursor-pointer border-b last:border-b-0 ${darkMode ? 'border-white/5 hover:bg-white/5' : 'border-neutral-50 hover:bg-neutral-50'} ${!n.isRead ? (darkMode ? 'bg-indigo-500/5' : 'bg-indigo-50/60') : ''}`}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${darkMode ? 'bg-white/10' : 'bg-slate-100'}`}>
@@ -143,9 +159,14 @@ export default function NotificationsDropdown({ userId, darkMode }: Notification
                     <p className={`text-[10px] mt-0.5 leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{n.body}</p>
                     <p className="text-[9px] font-mono text-slate-400 mt-1">{timeAgo(n.createdAt)}</p>
                   </div>
-                  {!n.isRead && (
-                    <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  )}
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {!n.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                    )}
+                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-400'}`}>
+                      {n.type === 'message' ? 'Open chat →' : n.type === 'connection_request' ? 'View →' : 'Go →'}
+                    </span>
+                  </div>
                 </button>
               ))
             )}

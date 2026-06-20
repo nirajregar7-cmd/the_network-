@@ -93,19 +93,23 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetView = event.notification.data?.view || 'messages';
+  const targetUserId = event.notification.data?.userId || null;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       // If a window is already open, post a message to navigate without reloading
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.postMessage({ type: 'SW_NAVIGATE', view: targetView });
+          client.postMessage({ type: 'SW_NAVIGATE', view: targetView, userId: targetUserId });
           return client.focus();
         }
       }
       // No open window — open one with view param
       if (clients.openWindow) {
-        return clients.openWindow(`/?view=${targetView}`);
+        const url = targetUserId
+          ? `/?view=${targetView}&userId=${targetUserId}`
+          : `/?view=${targetView}`;
+        return clients.openWindow(url);
       }
     })
   );

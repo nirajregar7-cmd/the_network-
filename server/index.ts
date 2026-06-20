@@ -390,6 +390,7 @@ app.post('/api/messages', async (req, res) => {
         icon: '/icons/icon-192x192.png',
         tag: `msg-${senderId}`,
         view: 'messages',
+        data: { userId: senderId },
       });
     }
     return res.json({ ...newMsg[0], createdAt: newMsg[0].createdAt.toISOString() });

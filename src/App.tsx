@@ -143,8 +143,10 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
+    const userId = params.get('userId');
     if (view) {
       setActiveView(view);
+      if (userId && view === 'messages') setPreSelectedMsgUserId(userId);
       // Clean URL without reload
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -155,6 +157,9 @@ export default function App() {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === 'SW_NAVIGATE' && e.data.view) {
         setActiveView(e.data.view);
+        if (e.data.userId && e.data.view === 'messages') {
+          setPreSelectedMsgUserId(e.data.userId);
+        }
       }
     };
     navigator.serviceWorker?.addEventListener('message', handler);
@@ -625,7 +630,14 @@ export default function App() {
             <LogOut size={14} />
           </button>
 
-          <NotificationsDropdown userId={currentUser.id} darkMode={darkMode} />
+          <NotificationsDropdown
+            userId={currentUser.id}
+            darkMode={darkMode}
+            onNavigate={(view, actorId) => {
+              if (view === 'messages' && actorId) setPreSelectedMsgUserId(actorId);
+              setActiveView(view);
+            }}
+          />
 
           <div className="hidden sm:flex bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 text-[11px] font-mono items-center font-bold">
             <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
