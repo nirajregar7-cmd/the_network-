@@ -13,7 +13,7 @@ import { eq, or, and, desc } from 'drizzle-orm';
 
 // ── Brevo Transactional Email API (no IP restriction) ─────────────────────────
 const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@thenetwork.app';
-const BREVO_API_KEY = process.env.SMTP_PASS || '';
+const BREVO_API_KEY = process.env.BREVO_API_KEY || process.env.SMTP_PASS || '';
 
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
