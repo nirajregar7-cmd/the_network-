@@ -1,5 +1,6 @@
-import React from 'react';
-import { UserProfile, Connection, Post, Community, DirectMessage, Story } from '../types';
+import React, { useState, useEffect } from 'react';
+import { UserProfile, Connection, Post, Community, DirectMessage, Story, CampusEvent } from '../types';
+import { api } from '../api';
 import { Users, BookOpen, MessageSquare, GraduationCap, Award, ShieldCheck, ArrowRight, Compass, Sparkles, AlertCircle } from 'lucide-react';
 import StoriesBubbleTray from './StoriesBubbleTray';
 import Avatar from './Avatar';
@@ -75,32 +76,21 @@ export default function DashboardSection({
     .slice(0, 3);
 
   // Hardcoded academic events relevant for student discovery & welcoming hub
-  const campusEvents = [
-    {
-      id: 'e1',
-      title: 'Inter-College Hackathon Kickoff',
-      organizer: 'Startups & Ventures',
-      date: 'June 25, 2026',
-      desc: 'Form high-impact cross-functional teams and query seed funding mentors.',
-      label: 'Hackathon'
-    },
-    {
-      id: 'e2',
-      title: 'Graph Traversal Peer Circle',
-      organizer: 'Competitive Coding',
-      date: 'Tonight, 9:00 PM',
-      desc: 'Join our weekly algorithmic sprint covering Trees and complex cyclic graphs.',
-      label: 'Study Group'
-    },
-    {
-      id: 'e3',
-      title: 'Postgrad Opportunities & Research Funding',
-      organizer: 'AI/ML Research Group',
-      date: 'June 28, 2026',
-      desc: 'Professors discussing application blueprints and research grant distributions.',
-      label: 'Seminar'
-    }
-  ];
+  const [campusEvents, setCampusEvents] = useState<CampusEvent[]>([]);
+
+  useEffect(() => {
+    api.events.getAll().then((data: CampusEvent[]) => setCampusEvents(data)).catch(() => {});
+  }, []);
+
+  const handleDashboardRegister = async (ev: CampusEvent) => {
+    const isReg = ev.registeredIds.includes(currentUser.id);
+    try {
+      const updated = isReg
+        ? await api.events.unregister(ev.id, currentUser.id)
+        : await api.events.register(ev.id, currentUser.id);
+      setCampusEvents(prev => prev.map(e => e.id === ev.id ? updated : e));
+    } catch {}
+  };
 
   return (
     <div className="space-y-6">
@@ -291,8 +281,12 @@ export default function DashboardSection({
           </h2>
 
           <div className="space-y-3">
-            {campusEvents.map((event) => {
-              const isRegistered = registeredEvents.includes(event.id);
+            {campusEvents.length === 0 ? (
+              <p className="text-[11px] text-slate-400 text-center py-4">No events yet — post one in the Events tab!</p>
+            ) : campusEvents.map((event) => {
+              const isRegistered = event.registeredIds.includes(currentUser.id);
+              const spotsLeft = event.maxSeats ? event.maxSeats - event.registeredIds.length : null;
+              const isFull = spotsLeft !== null && spotsLeft <= 0 && !isRegistered;
               return (
                 <div
                   id={`event-card-${event.id}`}
@@ -302,18 +296,21 @@ export default function DashboardSection({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="inline-block py-0.5 px-2 text-[8px] font-bold uppercase tracking-wider rounded-full bg-indigo-500/10 text-indigo-550 dark:bg-indigo-500/20 dark:text-indigo-400">
-                        {event.label}
+                        {event.category}
                       </span>
                       <span className="text-[10px] font-mono opacity-50">
-                        {event.date}
+                        {event.date}{event.time ? ` · ${event.time}` : ''}
                       </span>
                     </div>
                     
                     <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">{event.title}</h4>
                     
                     <p className={`text-xs opacity-75 leading-relaxed text-left ${darkMode ? 'text-slate-350' : 'text-neutral-650'}`}>
-                      {event.desc}
+                      {event.description}
                     </p>
+                    {event.venue && (
+                      <p className="text-[10px] text-slate-400 font-mono">📍 {event.venue}</p>
+                    )}
                   </div>
 
                   <div className="mt-3.5 pt-2.5 border-t border-dashed border-neutral-100 dark:border-white/5 flex items-center justify-between text-[10px]">
@@ -322,11 +319,11 @@ export default function DashboardSection({
                     </span>
                     <button
                       id={`btn-join-event-${event.id}`}
-                      onClick={() => onRegisterEvent(event.id)}
-                      disabled={isRegistered}
-                      className={`text-[9px] font-bold uppercase tracking-wider cursor-pointer font-sans px-2.5 py-1 rounded-md transition-all ${isRegistered ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-default' : 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white'}`}
+                      onClick={() => handleDashboardRegister(event)}
+                      disabled={isFull}
+                      className={`text-[9px] font-bold uppercase tracking-wider cursor-pointer font-sans px-2.5 py-1 rounded-md transition-all ${isRegistered ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : isFull ? 'bg-neutral-100 dark:bg-white/5 text-slate-400 cursor-not-allowed' : 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white'}`}
                     >
-                      {isRegistered ? '✓ Seat Reserved' : 'Register Seat'}
+                      {isRegistered ? '✓ Seat Reserved' : isFull ? 'Full' : 'Register Seat'}
                     </button>
                   </div>
                 </div>

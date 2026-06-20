@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions,
-  notifications, projects
+  notifications, projects, events
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
 
@@ -464,6 +464,102 @@ app.put('/api/communities/:id', async (req, res) => {
 app.delete('/api/communities/:id', async (req, res) => {
   try {
     await db.delete(communities).where(eq(communities.id, req.params.id));
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── EVENTS ──────────────────────────────────────────────────────────────────
+
+app.get('/api/events', async (_req, res) => {
+  try {
+    const all = await db.select().from(events).orderBy(desc(events.createdAt));
+    return res.json(all.map(e => ({ ...e, createdAt: e.createdAt.toISOString() })));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/events', async (req, res) => {
+  try {
+    const { title, description, category, date, time, venue, organizer, organizerId, college, maxSeats, isOnline, link } = req.body;
+    const created = await db.insert(events).values({
+      id: generateId('evt'),
+      title, description,
+      category: category || 'General',
+      date, time: time || '',
+      venue: venue || '',
+      organizer: organizer || '',
+      organizerId,
+      college: college || '',
+      registeredIds: [],
+      maxSeats: maxSeats || null,
+      isOnline: isOnline || false,
+      link: link || '',
+    }).returning();
+    return res.json({ ...created[0], createdAt: created[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/events/:id', async (req, res) => {
+  try {
+    const found = await db.select().from(events).where(eq(events.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Event not found' });
+    const { title, description, category, date, time, venue, organizer, college, maxSeats, isOnline, link } = req.body;
+    const updated = await db.update(events).set({
+      title: title ?? found[0].title,
+      description: description ?? found[0].description,
+      category: category ?? found[0].category,
+      date: date ?? found[0].date,
+      time: time ?? found[0].time,
+      venue: venue ?? found[0].venue,
+      organizer: organizer ?? found[0].organizer,
+      college: college ?? found[0].college,
+      maxSeats: maxSeats ?? found[0].maxSeats,
+      isOnline: isOnline ?? found[0].isOnline,
+      link: link ?? found[0].link,
+    }).where(eq(events.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/events/:id/register', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(events).where(eq(events.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Event not found' });
+    const ids = found[0].registeredIds as string[];
+    if (!ids.includes(userId)) {
+      const updated = await db.update(events).set({ registeredIds: [...ids, userId] }).where(eq(events.id, req.params.id)).returning();
+      return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+    }
+    return res.json({ ...found[0], createdAt: found[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/events/:id/unregister', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(events).where(eq(events.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Event not found' });
+    const ids = (found[0].registeredIds as string[]).filter((id: string) => id !== userId);
+    const updated = await db.update(events).set({ registeredIds: ids }).where(eq(events.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    await db.delete(events).where(eq(events.id, req.params.id));
     return res.json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

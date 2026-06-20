@@ -89,4 +89,12 @@ export const api = {
     join: (id: string, userId: string) => put(`/projects/${id}/join`, { userId }),
     leave: (id: string, userId: string) => put(`/projects/${id}/leave`, { userId }),
   },
+  events: {
+    getAll: () => get('/events'),
+    create: (data: any) => post('/events', data),
+    update: (id: string, data: any) => put(`/events/${id}`, data),
+    delete: (id: string) => del(`/events/${id}`),
+    register: (id: string, userId: string) => put(`/events/${id}/register`, { userId }),
+    unregister: (id: string, userId: string) => put(`/events/${id}/unregister`, { userId }),
+  },
 };

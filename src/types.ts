@@ -122,6 +122,24 @@ export interface UserReport {
   status: 'pending' | 'suspended' | 'dismissed';
 }
 
+export interface CampusEvent {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  date: string;
+  time: string;
+  venue: string;
+  organizer: string;
+  organizerId: string;
+  college: string;
+  registeredIds: string[];
+  maxSeats?: number | null;
+  isOnline: boolean;
+  link: string;
+  createdAt: string;
+}
+
 export interface Notification {
   id: string;
   userId: string;

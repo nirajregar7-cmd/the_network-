@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { UserProfile, Post, Comment, Community, Story, Connection } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { UserProfile, Post, Comment, Community, Story, Connection, CampusEvent } from '../types';
 import {
   Heart,
   MessageCircle,
@@ -14,10 +14,15 @@ import {
   ArrowRight,
   TrendingUp,
   UserPlus,
-  Sparkle
+  Sparkle,
+  MapPin,
+  X,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import StoriesBubbleTray from './StoriesBubbleTray';
 import Avatar from './Avatar';
+import { api } from '../api';
 
 interface FeedSectionProps {
   currentUser: UserProfile;
@@ -111,32 +116,23 @@ export default function FeedSection({
     { emoji: '💭', label: 'Brainstorming' }
   ];
 
-  const campusEvents = [
-    {
-      id: 'e1',
-      title: 'Inter-College Hackathon Kickoff',
-      organizer: 'Startups & Ventures',
-      date: 'June 25, 2026',
-      desc: 'Form high-impact study teams and query seed funding mentors.',
-      label: 'Hackathon'
-    },
-    {
-      id: 'e2',
-      title: 'Graph Traversal Peer Circle',
-      organizer: 'Competitive Coding',
-      date: 'Tonight, 9:00 PM',
-      desc: 'Join our weekly algorithmic sprint covering Trees and complex graph cycles.',
-      label: 'Study Group'
-    },
-    {
-      id: 'e3',
-      title: 'Postgrad Opportunities & Research Funding',
-      organizer: 'AI/ML Research Group',
-      date: 'June 28, 2026',
-      desc: 'Professors discussing application blueprints and research grant distributions.',
-      label: 'Seminar'
-    }
-  ];
+  const [campusEvents, setCampusEvents] = useState<CampusEvent[]>([]);
+  const [eventDetailPopup, setEventDetailPopup] = useState<CampusEvent | null>(null);
+
+  useEffect(() => {
+    api.events.getAll().then((data: CampusEvent[]) => setCampusEvents(data)).catch(() => {});
+  }, []);
+
+  const handleEventRegister = async (ev: CampusEvent) => {
+    const isRegistered = ev.registeredIds.includes(currentUser.id);
+    try {
+      const updated = isRegistered
+        ? await api.events.unregister(ev.id, currentUser.id)
+        : await api.events.register(ev.id, currentUser.id);
+      setCampusEvents(prev => prev.map(e => e.id === ev.id ? updated : e));
+      if (eventDetailPopup?.id === ev.id) setEventDetailPopup(updated);
+    } catch {}
+  };
 
   // Client-side local file uploader converts custom image to Base64
   const handleLocalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,6 +218,7 @@ export default function FeedSection({
     .map(m => m.user);
 
   return (
+    <>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
       
       {/* 2-Column Wide Left Segment: Instagram-Style Posts & Creator */}
@@ -239,37 +236,47 @@ export default function FeedSection({
         />
 
         {/* Compact Mobile Events Slider — horizontal, scrollbar hidden */}
-        <div className="block lg:hidden rounded-2xl border border-neutral-200/80 dark:border-white/10 p-4 shadow-sm overflow-hidden bg-gradient-to-tr from-indigo-50/10 to-indigo-500/5 dark:from-indigo-950/20 dark:to-transparent">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500 dark:text-indigo-400 flex items-center gap-1">
-              <Calendar size={12} /> Live Campus Events
-            </span>
-            <span className="text-[9px] font-mono opacity-50">{campusEvents.length} Sessions</span>
-          </div>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar">
-            {campusEvents.map((event) => {
-              const isJoined = registeredEvents.includes(event.id);
-              return (
-                <div key={event.id} className={`shrink-0 w-52 p-3 rounded-xl border ${darkMode ? 'bg-zinc-950 border-white/5' : 'bg-white border-neutral-250/60'}`}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="px-1.5 py-0.5 rounded text-[7.5px] font-bold uppercase tracking-tight bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/25">
-                      {event.label}
-                    </span>
-                    <span className="text-[8.5px] opacity-50 font-mono">{event.date}</span>
+        {campusEvents.length > 0 && (
+          <div className="block lg:hidden rounded-2xl border border-neutral-200/80 dark:border-white/10 p-4 shadow-sm overflow-hidden bg-gradient-to-tr from-indigo-50/10 to-indigo-500/5 dark:from-indigo-950/20 dark:to-transparent">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-500 dark:text-indigo-400 flex items-center gap-1">
+                <Calendar size={12} /> Live Campus Events
+              </span>
+              <span className="text-[9px] font-mono opacity-50">{campusEvents.length} Events</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar">
+              {campusEvents.map((event) => {
+                const isJoined = event.registeredIds.includes(currentUser.id);
+                return (
+                  <div key={event.id} className={`shrink-0 w-52 p-3 rounded-xl border ${darkMode ? 'bg-zinc-950 border-white/5' : 'bg-white border-neutral-250/60'}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[7.5px] font-bold uppercase tracking-tight bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/25">
+                        {event.category}
+                      </span>
+                      <span className="text-[8.5px] opacity-50 font-mono">{event.date}</span>
+                    </div>
+                    <h4 className="text-[11px] font-bold truncate text-slate-800 dark:text-white mb-1">{event.title}</h4>
+                    <p className="text-[9px] text-slate-400 truncate mb-2">{event.venue || event.college}</p>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setEventDetailPopup(event)}
+                        className={`flex-1 text-center py-1.5 text-[9px] font-bold uppercase rounded-lg transition-all cursor-pointer ${darkMode ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-neutral-100 text-slate-500 hover:bg-neutral-200'}`}
+                      >
+                        Details
+                      </button>
+                      <button
+                        onClick={() => handleEventRegister(event)}
+                        className={`flex-1 text-center py-1.5 text-[9px] font-bold uppercase rounded-lg transition-all cursor-pointer ${isJoined ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
+                      >
+                        {isJoined ? '✓ Going' : 'Join'}
+                      </button>
+                    </div>
                   </div>
-                  <h4 className="text-[11px] font-bold truncate text-slate-800 dark:text-white mb-2">{event.title}</h4>
-                  <button
-                    onClick={() => onRegisterEvent?.(event.id)}
-                    disabled={isJoined}
-                    className={`w-full text-center py-1.5 text-[9px] font-bold uppercase rounded-lg transition-all ${isJoined ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-default' : 'bg-indigo-500 text-white hover:bg-indigo-600 cursor-pointer'}`}
-                  >
-                    {isJoined ? '✓ Reserved' : 'Reserve Seat'}
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Instagram/LinkedIn-style Compose Card */}
         {!currentUser.isSuspended && (
@@ -710,35 +717,46 @@ export default function FeedSection({
             <span className="text-[9px] font-mono opacity-50">Happening now</span>
           </div>
 
-          <div className="space-y-4">
-            {campusEvents.map((event) => {
-              const isRegistered = registeredEvents.includes(event.id);
-              return (
-                <div key={event.id} className="text-xs group">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase bg-indigo-500/10 text-indigo-600 dark:bg-indigo-550/30 dark:text-indigo-400">
-                      {event.label}
-                    </span>
-                    <span className="text-[9px] font-mono opacity-50">{event.date}</span>
-                  </div>
-                  <h4 className="font-bold text-slate-850 dark:text-slate-100 transition-colors group-hover:text-indigo-500">{event.title}</h4>
-                  <p className="text-[10px] text-slate-400/90 leading-relaxed mt-1 text-left">{event.desc}</p>
-                  
-                  <div className="mt-2.5 flex items-center justify-between text-[9px] font-mono">
-                    <span className="opacity-60 text-slate-400">by {event.organizer}</span>
+          {campusEvents.length === 0 ? (
+            <p className="text-[10px] text-slate-400 text-center py-4">No events posted yet. Go to Events to post one!</p>
+          ) : (
+            <div className="space-y-4">
+              {campusEvents.slice(0, 4).map((event) => {
+                const isRegistered = event.registeredIds.includes(currentUser.id);
+                const spotsLeft = event.maxSeats ? event.maxSeats - event.registeredIds.length : null;
+                const isFull = spotsLeft !== null && spotsLeft <= 0 && !isRegistered;
+                return (
+                  <div key={event.id} className="text-xs group">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase bg-indigo-500/10 text-indigo-600 dark:bg-indigo-550/30 dark:text-indigo-400">
+                        {event.category}
+                      </span>
+                      <span className="text-[9px] font-mono opacity-50">{event.date}{event.time ? ` · ${event.time}` : ''}</span>
+                    </div>
                     <button
-                      onClick={() => onRegisterEvent?.(event.id)}
-                      disabled={isRegistered}
-                      className={`px-2 py-0.8 text-[8.5px] uppercase font-bold rounded cursor-pointer transition-all ${isRegistered ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 cursor-default' : 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white'}`}
+                      onClick={() => setEventDetailPopup(event)}
+                      className="block w-full text-left cursor-pointer"
                     >
-                      {isRegistered ? '✓ Reserved' : 'Register Seat'}
+                      <h4 className="font-bold text-slate-850 dark:text-slate-100 transition-colors group-hover:text-indigo-500">{event.title}</h4>
+                      <p className="text-[10px] text-slate-400/90 leading-relaxed mt-1 text-left line-clamp-2">{event.description}</p>
                     </button>
+                    
+                    <div className="mt-2.5 flex items-center justify-between text-[9px] font-mono">
+                      <span className="opacity-60 text-slate-400">by {event.organizer}</span>
+                      <button
+                        onClick={() => handleEventRegister(event)}
+                        disabled={isFull}
+                        className={`px-2 py-1 text-[8.5px] uppercase font-bold rounded cursor-pointer transition-all ${isRegistered ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : isFull ? 'bg-neutral-100 dark:bg-white/5 text-slate-400 cursor-not-allowed' : 'bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white'}`}
+                      >
+                        {isRegistered ? '✓ Reserved' : isFull ? 'Full' : 'Register Seat'}
+                      </button>
+                    </div>
+                    <div className="mt-3.5 border-b border-dashed border-neutral-150 dark:border-white/5" />
                   </div>
-                  <div className="mt-3.5 border-b border-dashed border-neutral-150 dark:border-white/5" />
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Smart Co-Founder Matching */}
@@ -791,6 +809,92 @@ export default function FeedSection({
 
       </div>
 
+    </div>
+
+    {eventDetailPopup && <EventDetailModal ev={eventDetailPopup} darkMode={darkMode} currentUser={currentUser} onClose={() => setEventDetailPopup(null)} onRegister={handleEventRegister} />}
+    </>
+  );
+}
+
+function EventDetailModal({ ev, darkMode, currentUser, onClose, onRegister }: {
+  ev: CampusEvent;
+  darkMode: boolean;
+  currentUser: UserProfile;
+  onClose: () => void;
+  onRegister: (ev: CampusEvent) => void;
+}) {
+  const isRegistered = ev.registeredIds.includes(currentUser.id);
+  const spotsLeft = ev.maxSeats ? ev.maxSeats - ev.registeredIds.length : null;
+  const isFull = spotsLeft !== null && spotsLeft <= 0 && !isRegistered;
+  const bannerColor = ev.category === 'Hackathon' ? 'from-orange-500 to-rose-500'
+    : ev.category === 'Study Group' ? 'from-blue-500 to-indigo-500'
+    : ev.category === 'Seminar' ? 'from-violet-500 to-purple-600'
+    : ev.category === 'Workshop' ? 'from-cyan-500 to-teal-500'
+    : 'from-indigo-500 to-purple-500';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div
+        className={`relative w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden ${darkMode ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={`h-16 bg-gradient-to-r ${bannerColor} flex items-center px-5 gap-3`}>
+          <span className="px-2 py-0.5 rounded bg-white/20 text-white text-[10px] font-bold">{ev.category}</span>
+          {ev.isOnline && <span className="text-[10px] font-bold text-white/80">🌐 Online</span>}
+          <button onClick={onClose} className="ml-auto text-white/80 hover:text-white cursor-pointer"><X size={16} /></button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          <h3 className={`font-bold text-sm leading-snug ${darkMode ? 'text-white' : 'text-slate-900'}`}>{ev.title}</h3>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className={`flex items-center gap-1.5 text-xs ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              <Calendar size={11} className="text-indigo-500 shrink-0" />{ev.date}
+            </div>
+            {ev.time && (
+              <div className={`flex items-center gap-1.5 text-xs ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <Clock size={11} className="text-indigo-500 shrink-0" />{ev.time}
+              </div>
+            )}
+            {ev.venue && (
+              <div className={`flex items-center gap-1.5 text-xs col-span-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <MapPin size={11} className="text-rose-500 shrink-0" />{ev.venue}
+              </div>
+            )}
+          </div>
+
+          <p className={`text-xs leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{ev.description}</p>
+
+          <div className="flex items-center justify-between text-[10px]">
+            <span className={`font-mono ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+              {ev.registeredIds.length}{ev.maxSeats ? `/${ev.maxSeats}` : ''} going
+              {isFull && <span className="ml-1 text-rose-500 font-bold">· FULL</span>}
+            </span>
+            <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>by {ev.organizer}</span>
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            {ev.link && (
+              <a
+                href={ev.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer ${darkMode ? 'border-white/10 text-slate-400 hover:bg-white/5' : 'border-neutral-200 text-slate-500 hover:bg-neutral-50'}`}
+              >
+                <ExternalLink size={11} />Link
+              </a>
+            )}
+            <button
+              onClick={() => onRegister(ev)}
+              disabled={isFull}
+              className={`flex-1 py-2 rounded-xl font-bold text-xs cursor-pointer transition-all ${isRegistered ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20' : isFull ? 'bg-neutral-100 dark:bg-white/5 text-slate-400 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600 text-white'}`}
+            >
+              {isRegistered ? '✓ Registered — Click to cancel' : isFull ? 'Event Full' : '🎟 Register for this Event'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

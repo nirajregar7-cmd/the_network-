@@ -1,6 +1,24 @@
 import { pgTable, text, boolean, integer, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+export const events = pgTable('events', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  category: text('category').notNull().default('General'), // Hackathon, Study Group, Seminar, Workshop, Social, Sports, Cultural
+  date: text('date').notNull(),   // ISO string or human-readable
+  time: text('time').notNull().default(''),
+  venue: text('venue').notNull().default(''),
+  organizer: text('organizer').notNull().default(''),
+  organizerId: text('organizer_id').notNull(),
+  college: text('college').notNull().default(''),
+  registeredIds: jsonb('registered_ids').notNull().default([]),
+  maxSeats: integer('max_seats'),
+  isOnline: boolean('is_online').notNull().default(false),
+  link: text('link').notNull().default(''),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
