@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import VideoTemplate from './components/video/VideoTemplate';
 
 const TOTAL_DURATION_MS = 7000 + 8500 + 8500 + 9000 + 8000;
@@ -6,6 +6,11 @@ const TOTAL_DURATION_MS = 7000 + 8500 + 8500 + 9000 + 8000;
 type ExportState = 'idle' | 'waiting' | 'recording' | 'done' | 'error';
 
 export default function VideoPage() {
+  useEffect(() => {
+    document.body.classList.add('video-page');
+    return () => document.body.classList.remove('video-page');
+  }, []);
+
   const [exportState, setExportState] = useState<ExportState>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
