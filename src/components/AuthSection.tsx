@@ -71,13 +71,15 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
 
   const sendOtp = async (isResend = false) => {
     setError(''); setSuccess('');
+    // OTP is never used for login — login uses email + password directly
+    if (mode === 'login') return;
     if (!email) { setError('Please enter your email first.'); return; }
     if (mode === 'register' && (!fullName || !college)) {
       setError('Please fill in all required fields first.'); return;
     }
     setLoading(true);
     try {
-      const purpose = mode === 'forgot' ? 'forgot-password' : mode;
+      const purpose = mode === 'forgot' ? 'forgot-password' : 'register';
       const data = mode === 'register' ? { fullName, college, branch, year, password } : undefined;
       await api.auth.sendOtp(email, purpose, data);
       setStep('otp');

@@ -657,13 +657,17 @@ function generateOTP() {
 
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
-    const { email, purpose, data } = req.body as { email: string; purpose: 'login' | 'register'; data?: any };
+    const { email, purpose, data } = req.body as { email: string; purpose: 'register' | 'forgot-password'; data?: any };
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    if (purpose === 'login' || purpose === 'forgot-password') {
+    // OTP is only for registration and password reset — never for login
+    if (purpose === 'forgot-password') {
       const found = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim()));
       if (found.length === 0) return res.status(404).json({ error: 'No account found with this email' });
       if (found[0].isSuspended) return res.status(403).json({ error: 'Your account has been suspended.' });
+    }
+    if (purpose !== 'register' && purpose !== 'forgot-password') {
+      return res.status(400).json({ error: 'Invalid OTP purpose' });
     }
 
     const otp = generateOTP();
@@ -795,37 +799,34 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
     otpStore.delete(key);
 
-    if (record.purpose === 'login') {
-      const found = await db.select().from(users).where(eq(users.email, key));
-      if (!found.length) return res.status(404).json({ error: 'User not found' });
-      await db.update(users).set({ isVerified: true }).where(eq(users.id, found[0].id));
-      return res.json({ user: toUserProfile({ ...found[0], isVerified: true }) });
-    } else {
-      // register
-      const d = record.data;
-      const existing = await db.select().from(users).where(eq(users.email, key));
-      if (existing.length > 0) return res.status(409).json({ error: 'Email already registered' });
-      const initials = d.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-      const newUser = await db.insert(users).values({
-        id: generateId('user'),
-        fullName: d.fullName,
-        college: d.college,
-        branch: d.branch,
-        year: Number(d.year) || 1,
-        email: key,
-        passwordHash: hashPassword(d.password),
-        avatar: d.avatar || initials,
-        aboutMe: '',
-        interests: [],
-        skills: [],
-        lookingFor: [],
-        isVerified: true,
-        isSuspended: false,
-        role: 'student',
-        privacySettings: { showEmail: true, onlyAllowVerifiedConnections: false, hideProfileFromSearch: false },
-      }).returning();
-      return res.json({ user: toUserProfile(newUser[0]) });
+    // OTP verify is only for registration (and forgot-password is handled separately)
+    if (record.purpose !== 'register') {
+      return res.status(400).json({ error: 'Invalid OTP purpose' });
     }
+
+    const d = record.data;
+    const existing = await db.select().from(users).where(eq(users.email, key));
+    if (existing.length > 0) return res.status(409).json({ error: 'Email already registered' });
+    const initials = d.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+    const newUser = await db.insert(users).values({
+      id: generateId('user'),
+      fullName: d.fullName,
+      college: d.college,
+      branch: d.branch,
+      year: Number(d.year) || 1,
+      email: key,
+      passwordHash: hashPassword(d.password),
+      avatar: d.avatar || initials,
+      aboutMe: '',
+      interests: [],
+      skills: [],
+      lookingFor: [],
+      isVerified: true,
+      isSuspended: false,
+      role: 'student',
+      privacySettings: { showEmail: true, onlyAllowVerifiedConnections: false, hideProfileFromSearch: false },
+    }).returning();
+    return res.json({ user: toUserProfile(newUser[0]) });
   } catch (err: any) {
     console.error('verify-otp error', err);
     return res.status(500).json({ error: err.message });
