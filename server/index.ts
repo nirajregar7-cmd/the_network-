@@ -4,7 +4,6 @@ import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
-import nodemailer from 'nodemailer';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions,
@@ -12,21 +11,30 @@ import {
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
 
-// ── Brevo SMTP / Nodemailer setup ─────────────────────────────────────────────
-const SMTP_USER = process.env.SMTP_USER || process.env.BREVO_SMTP_USER;
-const SMTP_HOST = process.env.SMTP_HOST || process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || process.env.BREVO_SMTP_PORT || '587');
+// ── Brevo Transactional Email API (no IP restriction) ─────────────────────────
+const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@thenetwork.app';
+const BREVO_API_KEY = process.env.SMTP_PASS || '';
 
-const gmailTransporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: false,
-  auth: {
-    user: SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM || SMTP_USER || 'noreply@thenetwork.app';
+async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': BREVO_API_KEY,
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'The Network', email: EMAIL_FROM_ADDRESS },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Brevo API error ${res.status}: ${txt}`);
+  }
+}
 
 // ── VAPID setup ───────────────────────────────────────────────────────────────
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || 'BMFhS7bR4UacelWJY8tepeccTdJW-FXMCDnFsNwzpWuyRS3n_-ayeRde3XSIvLt83L5WssZXn44RMcL5zPzQxhQ';
@@ -711,8 +719,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
     const otp = generateOTP();
     otpStore.set(email.toLowerCase().trim(), { otp, expiresAt: Date.now() + 10 * 60 * 1000, purpose, data });
 
-    await gmailTransporter.sendMail({
-      from: `"The Network" <${EMAIL_FROM_ADDRESS}>`,
+    await sendEmail({
       to: email,
       subject: `Your OTP for The Network — ${otp}`,
       html: `
@@ -752,8 +759,7 @@ app.post('/api/auth/send-email-change-otp', async (req, res) => {
     if (taken.length > 0) return res.status(409).json({ error: 'That email is already used by another account' });
     const otp = generateOTP();
     otpStore.set(`emailchange:${current}`, { otp, expiresAt: Date.now() + 10 * 60 * 1000, purpose: 'login', data: { currentEmail: current, newEmail: next } });
-    await gmailTransporter.sendMail({
-      from: `"The Network" <${EMAIL_FROM_ADDRESS}>`,
+    await sendEmail({
       to: next,
       subject: `Verify your new email for The Network — ${otp}`,
       html: `
@@ -907,8 +913,7 @@ app.post('/api/admin/send-email', async (req, res) => {
       await Promise.allSettled(
         batch.map(async (email) => {
           try {
-            await gmailTransporter.sendMail({
-              from: `"The Network" <${EMAIL_FROM_ADDRESS}>`,
+            await sendEmail({
               to: email,
               subject,
               html: `
