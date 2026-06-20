@@ -14,14 +14,15 @@ import { eq, or, and, desc } from 'drizzle-orm';
 
 // ── Brevo SMTP / Nodemailer setup ─────────────────────────────────────────────
 const gmailTransporter = nodemailer.createTransport({
-  host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.BREVO_SMTP_PORT || '587'),
+  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
-    user: process.env.BREVO_SMTP_USER,
-    pass: process.env.BREVO_SMTP_PASS,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
+const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@thenetwork.app';
 
 // ── VAPID setup ───────────────────────────────────────────────────────────────
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || 'BMFhS7bR4UacelWJY8tepeccTdJW-FXMCDnFsNwzpWuyRS3n_-ayeRde3XSIvLt83L5WssZXn44RMcL5zPzQxhQ';
@@ -674,7 +675,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
     otpStore.set(email.toLowerCase().trim(), { otp, expiresAt: Date.now() + 10 * 60 * 1000, purpose, data });
 
     await gmailTransporter.sendMail({
-      from: `"The Network" <${process.env.BREVO_SMTP_USER}>`,
+      from: `"The Network" <${EMAIL_FROM_ADDRESS}>`,
       to: email,
       subject: `Your OTP for The Network — ${otp}`,
       html: `
@@ -715,7 +716,7 @@ app.post('/api/auth/send-email-change-otp', async (req, res) => {
     const otp = generateOTP();
     otpStore.set(`emailchange:${current}`, { otp, expiresAt: Date.now() + 10 * 60 * 1000, purpose: 'login', data: { currentEmail: current, newEmail: next } });
     await gmailTransporter.sendMail({
-      from: `"The Network" <${process.env.BREVO_SMTP_USER}>`,
+      from: `"The Network" <${EMAIL_FROM_ADDRESS}>`,
       to: next,
       subject: `Verify your new email for The Network — ${otp}`,
       html: `
@@ -870,7 +871,7 @@ app.post('/api/admin/send-email', async (req, res) => {
         batch.map(async (email) => {
           try {
             await gmailTransporter.sendMail({
-              from: `"The Network" <${process.env.BREVO_SMTP_USER}>`,
+              from: `"The Network" <${EMAIL_FROM_ADDRESS}>`,
               to: email,
               subject,
               html: `
