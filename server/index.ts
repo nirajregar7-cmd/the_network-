@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions,
-  notifications, projects, events, groupChats, groupMessages
+  notifications, projects, events, groupChats, groupMessages, collegeAnnouncements
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
 
@@ -62,6 +62,7 @@ function toUserProfile(u: typeof users.$inferSelect) {
   const { passwordHash: _, ...rest } = u;
   return {
     ...rest,
+    collegeAdminOf: rest.collegeAdminOf ?? null,
     createdAt: rest.createdAt.toISOString(),
   };
 }
@@ -1242,6 +1243,84 @@ app.delete('/api/push/subscribe', async (req, res) => {
   try {
     const { endpoint } = req.body;
     await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── COLLEGE ADMIN ────────────────────────────────────────────────────────────
+
+// Assign or revoke college admin (super-admin only)
+app.put('/api/admin/college-admin', async (req, res) => {
+  try {
+    const { userId, college } = req.body; // college = null to revoke
+    const updated = await db.update(users)
+      .set({
+        role: college ? 'college_admin' : 'student',
+        collegeAdminOf: college || null,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated.length) return res.status(404).json({ error: 'User not found' });
+    return res.json(toUserProfile(updated[0]));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Get announcements for a college
+app.get('/api/college-announcements/:college', async (req, res) => {
+  try {
+    const college = decodeURIComponent(req.params.college);
+    const all = await db.select().from(collegeAnnouncements)
+      .where(eq(collegeAnnouncements.college, college))
+      .orderBy(desc(collegeAnnouncements.createdAt));
+    return res.json(all.map(a => ({ ...a, createdAt: a.createdAt.toISOString() })));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Create announcement
+app.post('/api/college-announcements', async (req, res) => {
+  try {
+    const { college, authorId, title, body, isPinned } = req.body;
+    if (!college || !authorId || !title || !body) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    const created = await db.insert(collegeAnnouncements).values({
+      id: generateId('ann'),
+      college, authorId, title, body,
+      isPinned: isPinned || false,
+    }).returning();
+    return res.json({ ...created[0], createdAt: created[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Update announcement (pin/unpin or edit)
+app.put('/api/college-announcements/:id', async (req, res) => {
+  try {
+    const { title, body, isPinned } = req.body;
+    const found = await db.select().from(collegeAnnouncements).where(eq(collegeAnnouncements.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Not found' });
+    const updated = await db.update(collegeAnnouncements).set({
+      title: title ?? found[0].title,
+      body: body ?? found[0].body,
+      isPinned: isPinned ?? found[0].isPinned,
+    }).where(eq(collegeAnnouncements.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete announcement
+app.delete('/api/college-announcements/:id', async (req, res) => {
+  try {
+    await db.delete(collegeAnnouncements).where(eq(collegeAnnouncements.id, req.params.id));
     return res.json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

@@ -109,4 +109,13 @@ export const api = {
     sendMessage: (id: string, senderId: string, content: string) =>
       post(`/group-chats/${id}/messages`, { senderId, content }),
   },
+  collegeAdmin: {
+    assign: (userId: string, college: string | null) => put('/admin/college-admin', { userId, college }),
+    getAnnouncements: (college: string) => get(`/college-announcements/${encodeURIComponent(college)}`),
+    createAnnouncement: (data: { college: string; authorId: string; title: string; body: string; isPinned?: boolean }) =>
+      post('/college-announcements', data),
+    updateAnnouncement: (id: string, data: { title?: string; body?: string; isPinned?: boolean }) =>
+      put(`/college-announcements/${id}`, data),
+    deleteAnnouncement: (id: string) => del(`/college-announcements/${id}`),
+  },
 };

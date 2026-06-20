@@ -12,12 +12,23 @@ export interface UserProfile {
   lookingFor: string[];
   isVerified: boolean;
   isSuspended: boolean;
-  role: 'student' | 'admin';
+  role: 'student' | 'admin' | 'college_admin';
+  collegeAdminOf?: string | null;
   privacySettings: {
     showEmail: boolean;
     onlyAllowVerifiedConnections: boolean;
     hideProfileFromSearch: boolean;
   };
+  createdAt: string;
+}
+
+export interface CollegeAnnouncement {
+  id: string;
+  college: string;
+  authorId: string;
+  title: string;
+  body: string;
+  isPinned: boolean;
   createdAt: string;
 }
 

@@ -12,6 +12,7 @@ import MessagingSection from './components/MessagingSection';
 import CommunitiesSection from './components/CommunitiesSection';
 import ProfileSection from './components/ProfileSection';
 import AdminSection from './components/AdminSection';
+import CollegeAdminSection from './components/CollegeAdminSection';
 import ProjectsSection from './components/ProjectsSection';
 import CollegesSection from './components/CollegesSection';
 import EventsSection from './components/EventsSection';
@@ -42,6 +43,7 @@ import {
   Rocket,
   Building2,
   Calendar,
+  Crown,
 } from 'lucide-react';
 
 type ThemeName = 'light' | 'dark' | 'ocean' | 'forest' | 'sunset' | 'midnight';
@@ -780,6 +782,16 @@ export default function App() {
                   <span>Admin Center</span>
                 </button>
               )}
+
+              {currentUser.role === 'college_admin' && (
+                <button
+                  onClick={() => setActiveView('college_admin')}
+                  className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'college_admin' ? 'bg-amber-500 text-white border-transparent shadow-sm' : 'text-amber-600 border-transparent hover:bg-amber-500/10'}`}
+                >
+                  <Crown size={14} />
+                  <span>College Panel</span>
+                </button>
+              )}
             </nav>
 
             <div className="hidden md:block mt-6 pt-4 border-t border-neutral-150 dark:border-white/10 space-y-3">
@@ -979,7 +991,19 @@ export default function App() {
               onToggleUserSuspension={handleToggleUserSuspension}
               onResolveReport={handleResolveReport}
               onDeletePost={handleDeletePost}
+              onAllUsersChange={setAllUsers}
               darkMode={darkMode}
+            />
+          )}
+
+          {activeView === 'college_admin' && currentUser.role === 'college_admin' && (
+            <CollegeAdminSection
+              currentUser={currentUser}
+              allUsers={allUsers}
+              communities={communities}
+              darkMode={darkMode}
+              onCommunitiesChange={setCommunities}
+              onAllUsersChange={setAllUsers}
             />
           )}
         </main>

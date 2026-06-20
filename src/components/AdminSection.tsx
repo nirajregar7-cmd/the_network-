@@ -5,7 +5,7 @@ import {
   ShieldAlert, X, Search, GraduationCap,
   TrendingUp, UserX, FileText, ChevronDown, ChevronUp,
   Calendar, Mail, BookOpen, KeyRound, Eye, EyeOff,
-  Upload, Download, CheckCircle2, AlertCircle, Send
+  Upload, Download, CheckCircle2, AlertCircle, Send, Crown, Building2
 } from 'lucide-react';
 import Avatar from './Avatar';
 import { api } from '../api';
@@ -19,10 +19,11 @@ interface AdminSectionProps {
   onToggleUserSuspension: (userId: string) => void;
   onResolveReport: (reportId: string, status: 'suspended' | 'dismissed') => void;
   onDeletePost: (postId: string) => void;
+  onAllUsersChange: (users: UserProfile[]) => void;
   darkMode: boolean;
 }
 
-type AdminTab = 'users' | 'reports' | 'posts' | 'import' | 'email';
+type AdminTab = 'users' | 'reports' | 'posts' | 'import' | 'email' | 'college_admins';
 
 export default function AdminSection({
   currentUser,
@@ -33,6 +34,7 @@ export default function AdminSection({
   onToggleUserSuspension,
   onResolveReport,
   onDeletePost,
+  onAllUsersChange,
   darkMode
 }: AdminSectionProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
@@ -232,8 +234,30 @@ export default function AdminSection({
     return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />;
   };
 
+  const collegeAdmins = allUsers.filter(u => u.role === 'college_admin');
+  const [caSearch, setCaSearch] = useState('');
+  const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState('');
+
+  const handleAssignCollegeAdmin = async (userId: string, college: string | null) => {
+    setAssignLoading(true);
+    try {
+      const updated = await api.collegeAdmin.assign(userId, college);
+      onAllUsersChange(allUsers.map(u => u.id === userId ? updated : u));
+      setAssigningUserId(null);
+      setAssignSuccess(college ? `${updated.fullName} is now admin of ${college}` : 'Role revoked');
+      setTimeout(() => setAssignSuccess(''), 4000);
+    } catch (err: any) {
+      alert('Failed: ' + err.message);
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
   const tabs: { id: AdminTab; label: string; count?: number }[] = [
     { id: 'users', label: 'All Users', count: allUsers.length },
+    { id: 'college_admins', label: 'College Admins', count: collegeAdmins.length },
     { id: 'reports', label: 'Reports', count: pendingReports.length },
     { id: 'posts', label: 'Post Moderation', count: posts.length },
     { id: 'import', label: 'CSV Import' },
@@ -502,6 +526,110 @@ export default function AdminSection({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* COLLEGE ADMINS TAB */}
+        {activeTab === 'college_admins' && (
+          <div className="p-4 space-y-4">
+            <div className={`p-4 rounded-xl border ${darkMode ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
+              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                <Crown size={13} />
+                Assign a student from any college as the College Admin. They will get a dedicated panel to manage announcements, clubs and members for their college.
+              </p>
+            </div>
+
+            {assignSuccess && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-xs font-semibold">
+                <CheckCircle2 size={13} /> {assignSuccess}
+              </div>
+            )}
+
+            {/* Current college admins */}
+            {collegeAdmins.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Current College Admins</p>
+                {collegeAdmins.map(u => (
+                  <div key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border ${darkMode ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
+                    <Avatar avatar={u.avatar} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{u.fullName}</p>
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                        <Crown size={9} /> Admin of: {u.collegeAdminOf}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleAssignCollegeAdmin(u.id, null)}
+                      disabled={assignLoading}
+                      className="py-1 px-2.5 rounded-xl text-[10px] font-bold border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      Revoke
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Assign new */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assign New College Admin</p>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs ${darkMode ? 'bg-[#09090C] border-white/10' : 'bg-neutral-50 border-neutral-200'}`}>
+                <Search size={13} className="opacity-40 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search students by name, college..."
+                  value={caSearch}
+                  onChange={e => setCaSearch(e.target.value)}
+                  className="bg-transparent outline-none w-full placeholder:text-slate-400 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                {allUsers
+                  .filter(u => u.role !== 'admin' && u.role !== 'college_admin' && !u.isSuspended)
+                  .filter(u => {
+                    if (!caSearch.trim()) return true;
+                    const q = caSearch.toLowerCase();
+                    return u.fullName.toLowerCase().includes(q) || u.college.toLowerCase().includes(q);
+                  })
+                  .map(u => (
+                    <div key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${darkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-neutral-50 border-neutral-200 hover:bg-white'}`}>
+                      <Avatar avatar={u.avatar} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{u.fullName}</p>
+                        <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                          <Building2 size={9} /> {u.college}
+                        </p>
+                      </div>
+                      {assigningUserId === u.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-500">Assign for:</span>
+                          <button
+                            onClick={() => handleAssignCollegeAdmin(u.id, u.college)}
+                            disabled={assignLoading}
+                            className="py-1 px-2.5 rounded-xl text-[10px] font-bold bg-amber-500 text-white hover:bg-amber-600 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {assignLoading ? '...' : u.college}
+                          </button>
+                          <button
+                            onClick={() => setAssigningUserId(null)}
+                            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAssigningUserId(u.id)}
+                          className="py-1 px-2.5 rounded-xl text-[10px] font-bold border border-amber-500/30 text-amber-500 hover:bg-amber-500/10 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <Crown size={10} /> Make Admin
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
             </div>
           </div>
         )}

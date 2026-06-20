@@ -58,11 +58,22 @@ export const users = pgTable('users', {
   isVerified: boolean('is_verified').notNull().default(false),
   isSuspended: boolean('is_suspended').notNull().default(false),
   role: text('role').notNull().default('student'),
+  collegeAdminOf: text('college_admin_of'),
   privacySettings: jsonb('privacy_settings').notNull().default({
     showEmail: true,
     onlyAllowVerifiedConnections: false,
     hideProfileFromSearch: false
   }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const collegeAnnouncements = pgTable('college_announcements', {
+  id: text('id').primaryKey(),
+  college: text('college').notNull(),
+  authorId: text('author_id').notNull(),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  isPinned: boolean('is_pinned').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
