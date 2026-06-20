@@ -247,6 +247,31 @@ app.post('/api/posts', async (req, res) => {
       postImage: postImage || null,
       feeling: feeling || null,
     }).returning();
+
+    // Push notification to all accepted connections of the author
+    const author = await db.select().from(users).where(eq(users.id, authorId));
+    if (author.length) {
+      const authorName = author[0].fullName;
+      const bodyPreview = content.length > 80 ? content.substring(0, 80) + '…' : content;
+      const authorConns = await db.select().from(connections).where(
+        and(
+          or(eq(connections.senderId, authorId), eq(connections.receiverId, authorId)),
+          eq(connections.status, 'accepted')
+        )
+      );
+      for (const conn of authorConns) {
+        const recipientId = conn.senderId === authorId ? conn.receiverId : conn.senderId;
+        sendPushToUser(recipientId, {
+          title: `📢 ${authorName} posted`,
+          body: bodyPreview,
+          icon: '/icons/icon-192x192.png',
+          tag: `post-${newPost[0].id}`,
+          view: 'feed',
+          data: { userId: authorId },
+        });
+      }
+    }
+
     return res.json(toPost(newPost[0], []));
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -362,6 +387,14 @@ app.put('/api/connections/:id', async (req, res) => {
       const receiver = await db.select().from(users).where(eq(users.id, found[0].receiverId));
       if (receiver.length) {
         await createNotification(found[0].senderId, found[0].receiverId, 'connection_accepted', '✅ Connection Accepted', `${receiver[0].fullName} accepted your connection request`);
+        sendPushToUser(found[0].senderId, {
+          title: '✅ Connection Accepted',
+          body: `${receiver[0].fullName} accepted your connection request`,
+          icon: '/icons/icon-192x192.png',
+          tag: `conn-accepted-${found[0].receiverId}`,
+          view: 'explore',
+          data: { userId: found[0].receiverId },
+        });
       }
     }
     return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });

@@ -68,7 +68,7 @@ export default function NotificationSetup({ userId, darkMode }: Props) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-bold leading-tight">Enable Notifications</p>
-        <p className="text-[11px] text-slate-400 mt-0.5">Get alerts for messages & connection requests</p>
+        <p className="text-[11px] text-slate-400 mt-0.5">Messages, connection updates & new posts from your network</p>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <button
