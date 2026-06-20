@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "KbZ8TzyvinkOA1W-yL6u6"
+uri = "file://public/images/bg-abstract.png"
+type = "image"
+title = "Abstract indigo tech background"
+
+[[generated]]
+id = "JZZ6RpCkRUu6Oof-Qg6ec"
+uri = "file://public/images/rocket-3d.png"
+type = "image"
+title = "3D startup rocket icon"
+
+[[generated]]
+id = "F1V0o05NJSt1ak2yrDiHS"
+uri = "file://public/images/nodes-bg.png"
+type = "image"
+title = "Abstract connection nodes"
