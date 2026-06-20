@@ -13,16 +13,20 @@ import {
 import { eq, or, and, desc } from 'drizzle-orm';
 
 // ── Brevo SMTP / Nodemailer setup ─────────────────────────────────────────────
+const SMTP_USER = process.env.BREVO_SMTP_USER || process.env.SMTP_USER;
+const SMTP_HOST = process.env.BREVO_SMTP_HOST || process.env.SMTP_HOST || 'smtp-relay.brevo.com';
+const SMTP_PORT = parseInt(process.env.BREVO_SMTP_PORT || process.env.SMTP_PORT || '587');
+
 const gmailTransporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
+  host: SMTP_HOST,
+  port: SMTP_PORT,
   secure: false,
   auth: {
-    user: process.env.SMTP_USER,
+    user: SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
-const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@thenetwork.app';
+const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM || SMTP_USER || 'noreply@thenetwork.app';
 
 // ── VAPID setup ───────────────────────────────────────────────────────────────
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || 'BMFhS7bR4UacelWJY8tepeccTdJW-FXMCDnFsNwzpWuyRS3n_-ayeRde3XSIvLt83L5WssZXn44RMcL5zPzQxhQ';
