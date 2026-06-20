@@ -614,11 +614,15 @@ export default function App() {
             </button>
           )}
           
-          <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-rose-500 via-amber-500 to-indigo-600">
+          <button
+            onClick={() => setActiveView('profile')}
+            className="p-[2.5px] rounded-full bg-gradient-to-tr from-rose-500 via-amber-500 to-indigo-600 cursor-pointer hover:scale-105 transition-transform"
+            title="View my profile"
+          >
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border border-white dark:border-[#09090C] overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-900'}`}>
               <Avatar avatar={currentUser.avatar} />
             </div>
-          </div>
+          </button>
         </div>
       </header>
 
@@ -894,6 +898,9 @@ export default function App() {
               currentUser={currentUser}
               onUpdateProfile={handleUpdateProfile}
               darkMode={darkMode}
+              communities={communities}
+              connections={connections}
+              allUsers={allUsers}
             />
           )}
 
