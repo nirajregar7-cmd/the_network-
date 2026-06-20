@@ -151,10 +151,12 @@ export interface Notification {
   createdAt: string;
 }
 
+export type CircleType = 'college' | 'batch' | 'branch' | 'course' | 'exam' | 'interest';
+
 export interface GroupChat {
   id: string;
   name: string;
-  type: 'class' | 'fun';
+  type: CircleType;
   creatorId: string;
   college: string;
   branch?: string | null;
