@@ -915,6 +915,7 @@ export default function App() {
               allUsers={allUsers}
               communities={communities}
               connections={connections}
+              posts={posts}
               darkMode={darkMode}
               onCommunitiesChange={setCommunities}
               onViewUserProfile={setViewingUserProfileId}
