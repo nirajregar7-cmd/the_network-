@@ -598,7 +598,7 @@ export default function App() {
   ).length;
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
+    <div className={`${activeView === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} w-full flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
       <header className="border-b border-neutral-200 dark:border-white/10 px-6 lg:px-8 py-3.5 flex items-center justify-between transition-all sticky top-0 z-30 backdrop-blur-md" style={{ backgroundColor: 'var(--t-header)' }}>
         <div className="flex items-center space-x-4 lg:space-x-8">
@@ -670,10 +670,10 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4">
+      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
         
         <aside className="w-full md:w-60 shrink-0 space-y-4">
-          <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all" style={{ backgroundColor: 'var(--t-card)' }}>
+          <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all overflow-hidden" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className="hidden md:flex items-center gap-2 mb-4 pb-2 border-b border-neutral-100 dark:border-white/10">
               <span className="p-1 text-white bg-indigo-500 rounded-lg">
                 <GraduationCap size={14} />
@@ -846,7 +846,7 @@ export default function App() {
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 space-y-6">
+        <main className={`flex-1 min-w-0 ${activeView === 'messages' ? 'flex flex-col min-h-0 overflow-hidden' : 'space-y-6'}`}>
           {activeView === 'dashboard' && (
             <DashboardSection
               currentUser={currentUser}
