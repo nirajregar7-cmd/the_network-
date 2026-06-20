@@ -150,6 +150,26 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export const groupChats = pgTable('group_chats', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  type: text('type').notNull().default('fun'),
+  creatorId: text('creator_id').notNull(),
+  college: text('college').notNull(),
+  branch: text('branch'),
+  memberIds: jsonb('member_ids').notNull().default([]),
+  pendingIds: jsonb('pending_ids').notNull().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const groupMessages = pgTable('group_messages', {
+  id: text('id').primaryKey(),
+  groupId: text('group_id').notNull(),
+  senderId: text('sender_id').notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   comments: many(comments),

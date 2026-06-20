@@ -97,4 +97,16 @@ export const api = {
     register: (id: string, userId: string) => put(`/events/${id}/register`, { userId }),
     unregister: (id: string, userId: string) => put(`/events/${id}/unregister`, { userId }),
   },
+  groupChats: {
+    getAll: () => get('/group-chats'),
+    create: (data: any) => post('/group-chats', data),
+    delete: (id: string) => del(`/group-chats/${id}`),
+    accept: (id: string, userId: string) => put(`/group-chats/${id}/accept`, { userId }),
+    decline: (id: string, userId: string) => put(`/group-chats/${id}/decline`, { userId }),
+    invite: (id: string, inviteUserIds: string[], actorId: string) =>
+      put(`/group-chats/${id}/invite`, { inviteUserIds, actorId }),
+    getMessages: (id: string) => get(`/group-chats/${id}/messages`),
+    sendMessage: (id: string, senderId: string, content: string) =>
+      post(`/group-chats/${id}/messages`, { senderId, content }),
+  },
 };

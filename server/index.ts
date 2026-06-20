@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions,
-  notifications, projects, events
+  notifications, projects, events, groupChats, groupMessages
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
 
@@ -1091,6 +1091,131 @@ app.delete('/api/projects/:id', async (req, res) => {
   try {
     await db.delete(projects).where(eq(projects.id, req.params.id));
     return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GROUP CHATS ─────────────────────────────────────────────────────────────
+
+app.get('/api/group-chats', async (_req, res) => {
+  try {
+    const all = await db.select().from(groupChats).orderBy(desc(groupChats.createdAt));
+    return res.json(all.map(g => ({ ...g, createdAt: g.createdAt.toISOString() })));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/group-chats', async (req, res) => {
+  try {
+    const { name, type, creatorId, college, branch, inviteUserIds } = req.body;
+    if (!name || !creatorId || !college) return res.status(400).json({ error: 'Missing fields' });
+    const pending = (inviteUserIds || []).filter((id: string) => id !== creatorId);
+    const created = await db.insert(groupChats).values({
+      id: generateId('grp'),
+      name, type: type || 'fun',
+      creatorId, college,
+      branch: branch || null,
+      memberIds: [creatorId],
+      pendingIds: pending,
+    }).returning();
+    // Notify invited users
+    for (const uid of pending) {
+      await createNotification(uid, creatorId, 'connection_request', '👥 Group Invite', `You've been invited to join "${name}"`);
+    }
+    return res.json({ ...created[0], createdAt: created[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/group-chats/:id/accept', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(groupChats).where(eq(groupChats.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Group not found' });
+    const g = found[0];
+    const members = (g.memberIds as string[]) || [];
+    const pending = ((g.pendingIds as string[]) || []).filter(id => id !== userId);
+    if (!members.includes(userId)) {
+      const updated = await db.update(groupChats).set({
+        memberIds: [...members, userId],
+        pendingIds: pending,
+      }).where(eq(groupChats.id, req.params.id)).returning();
+      return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+    }
+    return res.json({ ...g, createdAt: g.createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/group-chats/:id/decline', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(groupChats).where(eq(groupChats.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Group not found' });
+    const g = found[0];
+    const pending = ((g.pendingIds as string[]) || []).filter(id => id !== userId);
+    const updated = await db.update(groupChats).set({ pendingIds: pending }).where(eq(groupChats.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/group-chats/:id/invite', async (req, res) => {
+  try {
+    const { inviteUserIds, actorId } = req.body;
+    const found = await db.select().from(groupChats).where(eq(groupChats.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Group not found' });
+    const g = found[0];
+    const members = (g.memberIds as string[]) || [];
+    const pending = (g.pendingIds as string[]) || [];
+    const newPending = [...new Set([...pending, ...(inviteUserIds || []).filter((id: string) => !members.includes(id))])];
+    const updated = await db.update(groupChats).set({ pendingIds: newPending }).where(eq(groupChats.id, req.params.id)).returning();
+    for (const uid of inviteUserIds || []) {
+      await createNotification(uid, actorId, 'connection_request', '👥 Group Invite', `You've been invited to join "${g.name}"`);
+    }
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/group-chats/:id', async (req, res) => {
+  try {
+    await db.delete(groupMessages).where(eq(groupMessages.groupId, req.params.id));
+    await db.delete(groupChats).where(eq(groupChats.id, req.params.id));
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/group-chats/:id/messages', async (req, res) => {
+  try {
+    const msgs = await db.select().from(groupMessages)
+      .where(eq(groupMessages.groupId, req.params.id))
+      .orderBy(groupMessages.createdAt);
+    return res.json(msgs.map(m => ({ ...m, createdAt: m.createdAt.toISOString() })));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/group-chats/:id/messages', async (req, res) => {
+  try {
+    const { senderId, content } = req.body;
+    const found = await db.select().from(groupChats).where(eq(groupChats.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Group not found' });
+    const created = await db.insert(groupMessages).values({
+      id: generateId('gmsg'),
+      groupId: req.params.id,
+      senderId, content,
+    }).returning();
+    return res.json({ ...created[0], createdAt: created[0].createdAt.toISOString() });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

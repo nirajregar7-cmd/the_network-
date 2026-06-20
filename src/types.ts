@@ -151,6 +151,26 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface GroupChat {
+  id: string;
+  name: string;
+  type: 'class' | 'fun';
+  creatorId: string;
+  college: string;
+  branch?: string | null;
+  memberIds: string[];
+  pendingIds: string[];
+  createdAt: string;
+}
+
+export interface GroupMessage {
+  id: string;
+  groupId: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface Project {
   id: string;
   title: string;

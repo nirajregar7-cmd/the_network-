@@ -466,16 +466,6 @@ export default function App() {
     }
   };
 
-  const handleSimulateReply = async (partnerId: string, content: string) => {
-    if (!currentUser) return;
-    try {
-      const newMsg = await api.messages.send(partnerId, currentUser.id, content);
-      setMessages(prev => [...prev, newMsg]);
-    } catch (err) {
-      console.error('Failed to simulate reply', err);
-    }
-  };
-
   const handleReportUser = async (reportedUserId: string, reason: string, description: string) => {
     if (!currentUser) return;
     try {
@@ -885,10 +875,15 @@ export default function App() {
               allUsers={allUsers}
               messages={messages}
               onSendMessage={handleSendMessage}
-              onSimulateReply={handleSimulateReply}
               darkMode={darkMode}
               preSelectedUserId={preSelectedMsgUserId || undefined}
               onViewUserProfile={setViewingUserProfileId}
+              onMessagesRefresh={async () => {
+                try {
+                  const fresh = await api.messages.getAll();
+                  setMessages(fresh);
+                } catch {}
+              }}
             />
           )}
 
