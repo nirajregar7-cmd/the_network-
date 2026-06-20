@@ -13,9 +13,9 @@ import {
 import { eq, or, and, desc } from 'drizzle-orm';
 
 // ── Brevo SMTP / Nodemailer setup ─────────────────────────────────────────────
-const SMTP_USER = process.env.BREVO_SMTP_USER || process.env.SMTP_USER;
-const SMTP_HOST = process.env.BREVO_SMTP_HOST || process.env.SMTP_HOST || 'smtp-relay.brevo.com';
-const SMTP_PORT = parseInt(process.env.BREVO_SMTP_PORT || process.env.SMTP_PORT || '587');
+const SMTP_USER = process.env.SMTP_USER || process.env.BREVO_SMTP_USER;
+const SMTP_HOST = process.env.SMTP_HOST || process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || process.env.BREVO_SMTP_PORT || '587');
 
 const gmailTransporter = nodemailer.createTransport({
   host: SMTP_HOST,
