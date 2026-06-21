@@ -334,6 +334,16 @@ export default function CommunitiesSection({
                     </span>
                   )}
                 </div>
+                {selectedComm.creatorId && (() => {
+                  const creator = getUserDetails(selectedComm.creatorId);
+                  return (
+                    <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                      <span>🏅 Run by</span>
+                      <span className="font-bold text-slate-600 dark:text-slate-300">{creator.name}</span>
+                      <span className="opacity-60">· {creator.college}</span>
+                    </p>
+                  );
+                })()}
                 <p className={`text-xs leading-relaxed max-w-3xl ${darkMode ? 'text-zinc-450' : 'text-slate-650'}`}>
                   {selectedComm.description}
                 </p>
@@ -1005,6 +1015,16 @@ export default function CommunitiesSection({
                             <p className={`text-[11px] leading-relaxed line-clamp-2 min-h-[32px] ${darkMode ? 'text-zinc-400 font-normal' : 'text-slate-650'}`}>
                               {comm.description}
                             </p>
+                            {comm.creatorId && (() => {
+                              const creator = getUserDetails(comm.creatorId);
+                              return (
+                                <p className="text-[9px] text-slate-400 font-mono flex items-center gap-1">
+                                  <span>🏅</span>
+                                  <span>by <span className="font-bold text-slate-500 dark:text-slate-400">{creator.name}</span></span>
+                                  <span className="opacity-60">· {creator.college}</span>
+                                </p>
+                              );
+                            })()}
                           </div>
 
                           <div className="flex flex-wrap gap-1 font-mono text-[8.5px]">

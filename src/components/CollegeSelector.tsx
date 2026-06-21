@@ -5,6 +5,7 @@ import { INITIAL_COLLEGES, COLLEGE_CATEGORIES } from '../data/colleges';
 interface CollegeSelectorProps {
   value: string;
   onChange: (collegeName: string) => void;
+  onCategoryChange?: (category: string) => void;
   darkMode: boolean;
   label?: string;
   id?: string;
@@ -13,6 +14,7 @@ interface CollegeSelectorProps {
 export default function CollegeSelector({
   value,
   onChange,
+  onCategoryChange,
   darkMode,
   label = "University / College Seat",
   id = "college-select"
@@ -83,12 +85,7 @@ export default function CollegeSelector({
   const handleCategoryClick = (cat: string) => {
     setSelectedCategory(cat);
     setShowSuggestions(true);
-    // If we click a category, search within that category
-    if (cat === 'Other') {
-      // Clear or leave custom
-    } else {
-      // Find matches in the selected category
-    }
+    onCategoryChange?.(cat);
   };
 
   // Predefined category emoji flags for modern visual design
@@ -100,6 +97,8 @@ export default function CollegeSelector({
       case 'Law': return '⚖️';
       case 'Design': return '🎨';
       case 'Science': return '🔬';
+      case 'School': return '🏫';
+      case 'Competitive Exam': return '🏆';
       default: return '🎓';
     }
   };
@@ -148,8 +147,12 @@ export default function CollegeSelector({
           autoComplete="off"
           placeholder={
             selectedCategory === 'Other'
-              ? "Type customized college/academy name..."
-              : `Search in ${selectedCategory} (e.g., IIT, AIIMS, IIM)...`
+              ? "Type your institution / school name..."
+              : selectedCategory === 'School'
+              ? "Type your school name (e.g., Kendriya Vidyalaya, DPS, Navodaya)..."
+              : selectedCategory === 'Competitive Exam'
+              ? "Type your coaching / exam center name..."
+              : `Search ${selectedCategory} college (e.g., IIT, AIIMS, IIM)...`
           }
           value={searchQuery}
           onChange={handleInputChange}

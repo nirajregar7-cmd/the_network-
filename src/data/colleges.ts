@@ -10,6 +10,8 @@ export const COLLEGE_CATEGORIES = [
   'Law',
   'Design',
   'Science',
+  'School',
+  'Competitive Exam',
   'Other'
 ];
 

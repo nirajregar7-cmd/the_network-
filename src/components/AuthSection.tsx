@@ -4,6 +4,18 @@ import { Mail, Key, User, Award, GraduationCap, ArrowRight, RefreshCw, ShieldChe
 import CollegeSelector from './CollegeSelector';
 import { api } from '../api';
 
+const STREAM_DEPARTMENTS: Record<string, string[]> = {
+  Engineering: ['Computer Science', 'Information Technology', 'Electrical Engineering', 'Electronics & Communication', 'Mechanical Engineering', 'Civil Engineering', 'Chemical Engineering', 'Aerospace Engineering', 'Biomedical Engineering', 'Other / Custom'],
+  Medical: ['MBBS', 'BDS (Dentistry)', 'Nursing (B.Sc)', 'Pharmacy (B.Pharm)', 'Physiotherapy', 'BAMS (Ayurveda)', 'BHMS (Homeopathy)', 'Medical Lab Technology', 'Radiology & Imaging', 'Other / Custom'],
+  Management: ['MBA / PGDM', 'BBA', 'Finance & Accounting', 'Marketing', 'Human Resources', 'Operations Management', 'Business Economics', 'International Business', 'Other / Custom'],
+  Law: ['LLB (3-Year)', 'BA LLB (5-Year)', 'LLM', 'Criminal Law', 'Corporate Law', 'Constitutional Law', 'International Law', 'Other / Custom'],
+  Science: ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'Statistics', 'Biochemistry', 'Microbiology', 'Environmental Science', 'Other / Custom'],
+  Design: ['Product Design', 'Fashion Design', 'Architecture', 'Graphic Design', 'Interior Design', 'Animation & VFX', 'Industrial Design', 'Other / Custom'],
+  School: ['Science — PCM (Physics, Chemistry, Maths)', 'Science — PCB (Physics, Chemistry, Biology)', 'Science — PCMB (All Four)', 'Commerce (with Maths)', 'Commerce (without Maths)', 'Arts / Humanities', 'Other / Custom'],
+  'Competitive Exam': ['JEE (Engineering)', 'NEET (Medical)', 'UPSC (Civil Services)', 'CAT (MBA Entrance)', 'GATE (Engineering PG)', 'SSC / Government Jobs', 'Banking — IBPS / SBI', 'NDA (Defence)', 'CUET (Central Universities)', 'CLAT (Law Entrance)', 'Other / Custom'],
+  Other: ['Arts & Culture', 'Sports & Physical Education', 'Vocational Training', 'Diploma', 'Certificate Course', 'Other / Custom'],
+};
+
 interface AuthSectionProps {
   onLogin: (user: UserProfile) => void;
   darkMode: boolean;
@@ -22,7 +34,9 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [college, setCollege] = useState('');
+  const [collegeCategory, setCollegeCategory] = useState('Engineering');
   const [branch, setBranch] = useState('Computer Science');
+  const [customBranch, setCustomBranch] = useState('');
   const [year, setYear] = useState(1);
   const [currentEmail, setCurrentEmail] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -80,7 +94,8 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
     setLoading(true);
     try {
       const purpose = mode === 'forgot' ? 'forgot-password' : 'register';
-      const data = mode === 'register' ? { fullName, college, branch, year, password } : undefined;
+      const finalBranch = branch === 'Other / Custom' ? (customBranch.trim() || 'Other') : branch;
+      const data = mode === 'register' ? { fullName, college, branch: finalBranch, year, password } : undefined;
       await api.auth.sendOtp(email, purpose, data);
       setStep('otp');
       setResendCooldown(60);
@@ -277,36 +292,76 @@ export default function AuthSection({ onLogin, darkMode }: AuthSectionProps) {
                   </div>
                 </div>
 
-                <CollegeSelector id="auth-college" value={college} onChange={setCollege} darkMode={darkMode} label="University / College" />
+                <CollegeSelector
+                  id="auth-college"
+                  value={college}
+                  onChange={setCollege}
+                  onCategoryChange={(cat) => {
+                    setCollegeCategory(cat);
+                    const depts = STREAM_DEPARTMENTS[cat] || STREAM_DEPARTMENTS['Other'];
+                    setBranch(depts[0]);
+                    setCustomBranch('');
+                  }}
+                  darkMode={darkMode}
+                  label="University / College / School"
+                />
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Study Year</label>
+                    <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">
+                      {collegeCategory === 'School' ? 'Class / Grade' : collegeCategory === 'Competitive Exam' ? 'Prep Stage' : 'Study Year'}
+                    </label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><Award size={14} /></span>
                       <select value={year} onChange={e => setYear(Number(e.target.value))} className={`w-full pl-8 pr-3 py-2.5 text-xs rounded-xl border border-neutral-200 dark:border-white/10 focus:outline-none cursor-pointer ${darkMode ? 'bg-[#09090C] text-slate-300' : 'bg-white text-slate-800'}`}>
-                        <option value={1}>1st Year</option>
-                        <option value={2}>2nd Year</option>
-                        <option value={3}>3rd Year</option>
-                        <option value={4}>4th Year</option>
-                        <option value={5}>Postgrad</option>
+                        {collegeCategory === 'School' ? (
+                          <>
+                            <option value={1}>Class 9</option>
+                            <option value={2}>Class 10</option>
+                            <option value={3}>Class 11</option>
+                            <option value={4}>Class 12</option>
+                          </>
+                        ) : collegeCategory === 'Competitive Exam' ? (
+                          <>
+                            <option value={1}>1st Year Prep</option>
+                            <option value={2}>2nd Year Prep</option>
+                            <option value={3}>Dropper / Gap Year</option>
+                            <option value={4}>Appeared / Awaiting</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value={1}>1st Year</option>
+                            <option value={2}>2nd Year</option>
+                            <option value={3}>3rd Year</option>
+                            <option value={4}>4th Year</option>
+                            <option value={5}>Postgrad</option>
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Department</label>
-                    <select value={branch} onChange={e => setBranch(e.target.value)} className={`w-full px-3 py-2.5 text-xs rounded-xl border border-neutral-200 dark:border-white/10 focus:outline-none cursor-pointer ${darkMode ? 'bg-[#09090C] text-slate-300' : 'bg-white text-slate-800'}`}>
-                      <option>Computer Science</option>
-                      <option>Electrical Engineering</option>
-                      <option>Electronics & Instrumentation</option>
-                      <option>Mechanical Engineering</option>
-                      <option>Biotechnology</option>
-                      <option>Cognitive Science</option>
-                      <option>Physics</option>
-                      <option>Informatics</option>
-                      <option>Business Management</option>
-                      <option>Management Science & Engineering</option>
+                    <label className="block text-[8.5px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">
+                      {collegeCategory === 'School' ? 'Stream' : collegeCategory === 'Competitive Exam' ? 'Exam Target' : 'Department'}
+                    </label>
+                    <select
+                      value={branch}
+                      onChange={e => { setBranch(e.target.value); setCustomBranch(''); }}
+                      className={`w-full px-3 py-2.5 text-xs rounded-xl border border-neutral-200 dark:border-white/10 focus:outline-none cursor-pointer ${darkMode ? 'bg-[#09090C] text-slate-300' : 'bg-white text-slate-800'}`}
+                    >
+                      {(STREAM_DEPARTMENTS[collegeCategory] || STREAM_DEPARTMENTS['Other']).map(d => (
+                        <option key={d}>{d}</option>
+                      ))}
                     </select>
+                    {branch === 'Other / Custom' && (
+                      <input
+                        type="text"
+                        placeholder="Type your department / stream..."
+                        value={customBranch}
+                        onChange={e => setCustomBranch(e.target.value)}
+                        className={`mt-2 w-full px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 ${darkMode ? 'bg-[#09090C] text-slate-300' : 'bg-white text-slate-800'}`}
+                      />
+                    )}
                   </div>
                 </div>
               </>
