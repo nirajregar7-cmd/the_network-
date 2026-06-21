@@ -386,7 +386,7 @@ export default function MessagingSection({
       {/* ── Main Container ────────────────────────────────────────────────── */}
       <div
         className={`flex-1 rounded-2xl border border-neutral-200 dark:border-white/10 flex overflow-hidden shadow-sm min-h-0 ${dm ? 'bg-[#121217]' : 'bg-white text-slate-800'}`}
-        style={{ height: 'clamp(420px, 70vh, 640px)' }}
+        style={{ minHeight: '420px' }}
       >
         {/* ── LEFT PANEL ─────────────────────────────────────────────────── */}
         <div className={`${showMobileChat ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-neutral-200 dark:border-white/5 flex-col shrink-0 ${dm ? 'bg-[#09090C]' : 'bg-neutral-50/50'}`}>

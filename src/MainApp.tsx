@@ -676,7 +676,7 @@ export default function App() {
 
       <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
         
-        <aside className="w-full md:w-60 shrink-0 space-y-4">
+        <aside className={`w-full md:w-60 shrink-0 space-y-4 ${activeView === 'messages' ? 'md:overflow-y-auto md:max-h-full' : ''}`}>
           <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all overflow-x-auto md:overflow-hidden" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className="hidden md:flex items-center gap-2 mb-4 pb-2 border-b border-neutral-100 dark:border-white/10">
               <span className="p-1 text-white bg-indigo-500 rounded-lg">
