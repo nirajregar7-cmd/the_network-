@@ -181,6 +181,16 @@ export const groupMessages = pgTable('group_messages', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export const attendanceSubjects = pgTable('attendance_subjects', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  totalClasses: integer('total_classes').notNull().default(0),
+  presentClasses: integer('present_classes').notNull().default(0),
+  targetPercent: integer('target_percent').notNull().default(75),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   comments: many(comments),

@@ -109,6 +109,16 @@ export const api = {
     sendMessage: (id: string, senderId: string, content: string) =>
       post(`/group-chats/${id}/messages`, { senderId, content }),
   },
+  attendance: {
+    getAll: (userId: string) => get(`/attendance/${userId}`),
+    create: (userId: string, name: string, targetPercent: number) =>
+      post('/attendance', { userId, name, targetPercent }),
+    mark: (id: string, present: boolean) => put(`/attendance/${id}/mark`, { present }),
+    delete: (id: string) => del(`/attendance/${id}`),
+  },
+  batchGroup: {
+    ensure: (userId: string) => post('/batch-group/ensure', { userId }),
+  },
   collegeAdmin: {
     assign: (userId: string, college: string | null) => put('/admin/college-admin', { userId, college }),
     getAnnouncements: (college: string) => get(`/college-announcements/${encodeURIComponent(college)}`),

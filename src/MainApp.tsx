@@ -16,6 +16,7 @@ import CollegeAdminSection from './components/CollegeAdminSection';
 import ProjectsSection from './components/ProjectsSection';
 import CollegesSection from './components/CollegesSection';
 import EventsSection from './components/EventsSection';
+import AttendanceSection from './components/AttendanceSection';
 import NotificationsDropdown from './components/NotificationsDropdown';
 import Avatar from './components/Avatar';
 import InstallPrompt from './components/InstallPrompt';
@@ -44,6 +45,7 @@ import {
   Building2,
   Calendar,
   Crown,
+  ClipboardCheck,
 } from 'lucide-react';
 
 type ThemeName = 'light' | 'dark' | 'ocean' | 'forest' | 'sunset' | 'midnight';
@@ -234,6 +236,8 @@ export default function App() {
       }
       return [...prev, user];
     });
+    // Auto-join batch group
+    api.batchGroup.ensure(user.id).catch(() => {});
     if (isNewUser(user)) {
       setShowOnboarding(true);
     } else {
@@ -764,6 +768,15 @@ export default function App() {
               </button>
 
               <button
+                id="view-attendance-tab"
+                onClick={() => setActiveView('attendance')}
+                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'attendance' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
+              >
+                <ClipboardCheck size={14} />
+                <span>Attendance</span>
+              </button>
+
+              <button
                 id="view-profile-tab"
                 onClick={() => setActiveView('profile')}
                 className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'profile' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
@@ -928,6 +941,13 @@ export default function App() {
               allUsers={allUsers}
               darkMode={darkMode}
               onViewUserProfile={setViewingUserProfileId}
+            />
+          )}
+
+          {activeView === 'attendance' && (
+            <AttendanceSection
+              currentUser={currentUser}
+              darkMode={darkMode}
             />
           )}
 

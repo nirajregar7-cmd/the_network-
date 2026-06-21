@@ -7,7 +7,7 @@ import webpush from 'web-push';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions,
-  notifications, projects, events, groupChats, groupMessages, collegeAnnouncements
+  notifications, projects, events, groupChats, groupMessages, collegeAnnouncements, attendanceSubjects
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
 
@@ -1371,6 +1371,91 @@ app.delete('/api/college-announcements/:id', async (req, res) => {
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
+});
+
+// ─── ATTENDANCE TRACKER ───────────────────────────────────────────────────────
+
+app.get('/api/attendance/:userId', async (req, res) => {
+  try {
+    const rows = await db.select().from(attendanceSubjects)
+      .where(eq(attendanceSubjects.userId, req.params.userId))
+      .orderBy(attendanceSubjects.createdAt);
+    return res.json(rows);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/attendance', async (req, res) => {
+  try {
+    const { userId, name, targetPercent } = req.body;
+    const created = await db.insert(attendanceSubjects).values({
+      id: generateId('att'),
+      userId, name,
+      totalClasses: 0,
+      presentClasses: 0,
+      targetPercent: targetPercent ?? 75,
+    }).returning();
+    return res.json(created[0]);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/attendance/:id/mark', async (req, res) => {
+  try {
+    const { present } = req.body;
+    const found = await db.select().from(attendanceSubjects).where(eq(attendanceSubjects.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Not found' });
+    const s = found[0];
+    const updated = await db.update(attendanceSubjects).set({
+      totalClasses: s.totalClasses + 1,
+      presentClasses: present ? s.presentClasses + 1 : s.presentClasses,
+    }).where(eq(attendanceSubjects.id, req.params.id)).returning();
+    return res.json(updated[0]);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/attendance/:id', async (req, res) => {
+  try {
+    await db.delete(attendanceSubjects).where(eq(attendanceSubjects.id, req.params.id));
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+// ─── BATCH GROUP AUTO-ENSURE ──────────────────────────────────────────────────
+
+app.post('/api/batch-group/ensure', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const userRows = await db.select().from(users).where(eq(users.id, userId));
+    if (!userRows.length) return res.status(404).json({ error: 'User not found' });
+    const u = userRows[0];
+
+    const batchName = `${u.college} · ${u.branch} · Year ${u.year}`;
+    const all = await db.select().from(groupChats);
+    let batchGroup = all.find(g => g.type === 'batch' && g.name === batchName);
+
+    if (!batchGroup) {
+      const created = await db.insert(groupChats).values({
+        id: generateId('batch'),
+        name: batchName,
+        type: 'batch',
+        creatorId: userId,
+        college: u.college,
+        branch: u.branch ?? null,
+        memberIds: [userId],
+        pendingIds: [],
+      }).returning();
+      batchGroup = created[0];
+    } else {
+      const members = (batchGroup.memberIds as string[]) || [];
+      if (!members.includes(userId)) {
+        const updated = await db.update(groupChats)
+          .set({ memberIds: [...members, userId] })
+          .where(eq(groupChats.id, batchGroup.id))
+          .returning();
+        batchGroup = updated[0];
+      }
+    }
+    return res.json({ ...batchGroup, createdAt: batchGroup.createdAt.toISOString() });
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
 });
 
 // Serve built frontend in production
