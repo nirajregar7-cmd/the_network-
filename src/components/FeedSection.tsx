@@ -1055,8 +1055,9 @@ export default function FeedSection({
                 </div>
               );
 
-              const shouldInject = (postIndex + 1) % 3 === 0;
-              const suggTypeIndex = (Math.floor((postIndex + 1) / 3) - 1) % 6;
+              const shouldInject = true;
+              const FEED_TYPES = [5, 1, 3]; // Explore Campus → Communities → Campus Groups
+              const suggTypeIndex = FEED_TYPES[postIndex % FEED_TYPES.length];
               const suggCard = shouldInject ? renderSuggestionCard(suggTypeIndex, `sugg-${postIndex}`) : null;
               return [postCard, ...(suggCard ? [suggCard] : [])];
             })
