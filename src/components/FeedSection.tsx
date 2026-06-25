@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile, Post, Comment, Community, Story, Connection, CampusEvent } from '../types';
+import { UserProfile, Post, Comment, Community, Story, Connection, CampusEvent, Project } from '../types';
 import {
   Heart,
   MessageCircle,
@@ -121,9 +121,11 @@ export default function FeedSection({
 
   const [campusEvents, setCampusEvents] = useState<CampusEvent[]>([]);
   const [eventDetailPopup, setEventDetailPopup] = useState<CampusEvent | null>(null);
+  const [feedProjects, setFeedProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     api.events.getAll().then((data: CampusEvent[]) => setCampusEvents(data)).catch(() => {});
+    api.projects.getAll().then((data: Project[]) => setFeedProjects(data)).catch(() => {});
   }, []);
 
   const handleEventRegister = async (ev: CampusEvent) => {
@@ -220,143 +222,194 @@ export default function FeedSection({
     .slice(0, 4)
     .map(m => m.user);
 
-  // Suggestion cards injected between posts (Instagram-style)
+  // ── Feed Suggestion System (Instagram-style injected cards) ──────────────
   const dm = darkMode;
+
+  // Priority-sorted suggestion data
   const suggestPeople = allUsers
     .filter(u => u.id !== currentUser.id && !u.isSuspended && !connectedUserIds.has(u.id))
-    .sort(() => 0.5 - Math.random())
+    .map(u => {
+      let score = 0;
+      score += u.interests.filter(i => currentUser.interests.includes(i)).length * 3;
+      score += u.lookingFor.filter(l => currentUser.lookingFor.includes(l)).length * 2;
+      if (u.college === currentUser.college) score += 4;
+      if (u.isVerified) score += 1;
+      return { u, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(x => x.u);
+
+  const suggestCommunities = communities
+    .filter(c => !c.memberIds.includes(currentUser.id) && c.category !== 'Club')
+    .sort((a, b) => b.memberIds.length - a.memberIds.length)
+    .slice(0, 8);
+
+  const suggestClubs = communities
+    .filter(c => !c.memberIds.includes(currentUser.id) && c.category === 'Club')
+    .sort((a, b) => b.memberIds.length - a.memberIds.length)
+    .slice(0, 8);
+
+  const suggestEvents = campusEvents
+    .filter(e => !e.registeredIds.includes(currentUser.id))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 6);
-  const suggestCommunities = communities.filter(c => !c.memberIds.includes(currentUser.id)).slice(0, 8);
+
+  const suggestProjects = feedProjects
+    .filter(p => !p.memberIds.includes(currentUser.id))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 6);
+
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
+  const [joinedFromFeed, setJoinedFromFeed] = useState<Set<string>>(new Set());
+  const [registeredFromFeed, setRegisteredFromFeed] = useState<Set<string>>(new Set());
+
+  const SuggCard = ({ keyVal, header, sub, accentColor, seeAllView, seeAllLabel, children }: {
+    keyVal: string; header: string; sub: string; accentColor: string; seeAllView: string; seeAllLabel: string; children: React.ReactNode;
+  }) => (
+    <div key={keyVal} className={`rounded-2xl border overflow-hidden shadow-sm ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}>
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div>
+          <p className={`text-[10px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{sub}</p>
+          <h3 className={`text-xs font-bold mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>{header}</h3>
+        </div>
+        <button onClick={() => setDismissedSuggestions(prev => new Set([...prev, parseInt(keyVal.split('-')[1])]))} className={`text-[10px] px-2 py-1 rounded-lg cursor-pointer transition-all ${dm ? 'text-slate-500 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}>✕</button>
+      </div>
+      <div className="flex gap-3 overflow-x-auto px-4 pb-4 pt-1" style={{scrollbarWidth:'none'}}>{children}</div>
+      <div className={`px-4 pb-3 border-t pt-2.5 ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+        <button onClick={() => onNavigate?.(seeAllView)} className={`text-[11px] font-semibold cursor-pointer transition-all ${accentColor}`}>{seeAllLabel} →</button>
+      </div>
+    </div>
+  );
 
   const renderSuggestionCard = (typeIndex: number, key: string) => {
-    if (dismissedSuggestions.has(typeIndex)) return null;
-    const dismiss = () => setDismissedSuggestions(prev => new Set([...prev, typeIndex]));
+    const typeNum = parseInt(key.split('-')[1]);
+    if (dismissedSuggestions.has(typeNum)) return null;
 
-    if (typeIndex === 0) {
-      return (
-        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <div>
-              <p className={`text-[10px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Suggested for you</p>
-              <h3 className={`text-xs font-bold mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>People You May Know 🤝</h3>
-            </div>
-            <button onClick={dismiss} className={`text-[10px] px-2 py-1 rounded-lg ${dm ? 'text-slate-500 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'} transition-all cursor-pointer`}>✕</button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto px-4 pb-4 pt-1 scrollbar-hide">
-            {suggestPeople.length === 0 ? (
-              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You're well connected! 🎉</p>
-            ) : suggestPeople.map(u => (
-              <div key={u.id} className={`shrink-0 w-32 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer" onClick={() => onViewUserProfile?.(u.id)}>
-                  <Avatar avatar={u.avatar} />
-                </div>
-                <div className="w-full">
-                  <p className={`text-[11px] font-bold truncate cursor-pointer hover:underline ${dm ? 'text-white' : 'text-slate-900'}`} onClick={() => onViewUserProfile?.(u.id)}>{u.fullName.split(' ')[0]}</p>
-                  <p className={`text-[9px] truncate mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{u.college?.split(' ').slice(0,2).join(' ') || 'Student'}</p>
-                </div>
-                <button onClick={() => onSendConnectionRequest?.(u.id)} className="w-full py-1 rounded-lg bg-indigo-500 text-white text-[10px] font-bold hover:bg-indigo-600 transition-all cursor-pointer">
-                  + Connect
-                </button>
+    // TYPE 0 — People You May Know
+    if (typeIndex === 0) return (
+      <SuggCard keyVal={key} header="People You May Know 🤝" sub="Suggested for you" accentColor={dm ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} seeAllView="explore" seeAllLabel="Discover more students on campus">
+        {suggestPeople.length === 0
+          ? <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You're well connected! 🎉</p>
+          : suggestPeople.map(u => (
+            <div key={u.id} className={`shrink-0 w-32 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer" onClick={() => onViewUserProfile?.(u.id)}>
+                <Avatar avatar={u.avatar} />
               </div>
-            ))}
-          </div>
-          <div className={`px-4 pb-3 border-t pt-2 ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
-            <button onClick={() => onNavigate?.('explore')} className={`text-[11px] font-semibold ${dm ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} transition-all cursor-pointer`}>
-              Discover more students on campus →
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    if (typeIndex === 1) {
-      return (
-        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <div>
-              <p className={`text-[10px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Join the Buzz</p>
-              <h3 className={`text-xs font-bold mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Clubs & Communities 🏛️</h3>
-            </div>
-            <button onClick={dismiss} className={`text-[10px] px-2 py-1 rounded-lg ${dm ? 'text-slate-500 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'} transition-all cursor-pointer`}>✕</button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto px-4 pb-4 pt-1 scrollbar-hide">
-            {suggestCommunities.length === 0 ? (
-              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You've joined all communities 🎉</p>
-            ) : suggestCommunities.map(c => (
-              <div key={c.id} className={`shrink-0 w-36 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-2xl ${dm ? 'bg-white/10' : 'bg-indigo-50'}`}>{c.icon}</div>
-                <div className="w-full">
-                  <p className={`text-[11px] font-bold truncate ${dm ? 'text-white' : 'text-slate-900'}`}>{c.name}</p>
-                  <p className={`text-[9px] mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{c.memberIds.length} members · {c.category}</p>
-                </div>
-                <button onClick={() => onNavigate?.('communities')} className="w-full py-1 rounded-lg bg-emerald-500 text-white text-[10px] font-bold hover:bg-emerald-600 transition-all cursor-pointer">
-                  Join
-                </button>
+              <div className="w-full">
+                <p className={`text-[11px] font-bold truncate cursor-pointer hover:underline ${dm ? 'text-white' : 'text-slate-900'}`} onClick={() => onViewUserProfile?.(u.id)}>{u.fullName.split(' ')[0]}</p>
+                <p className={`text-[9px] truncate mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{u.college?.split(' ').slice(0,3).join(' ') || 'Student'}</p>
+                {u.lookingFor.length > 0 && <p className={`text-[8px] mt-0.5 truncate font-medium ${dm ? 'text-indigo-400' : 'text-indigo-500'}`}>{u.lookingFor[0]}</p>}
               </div>
-            ))}
-          </div>
-          <div className={`px-4 pb-3 border-t pt-2 ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
-            <button onClick={() => onNavigate?.('communities')} className={`text-[11px] font-semibold ${dm ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'} transition-all cursor-pointer`}>
-              Browse all clubs & communities →
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    if (typeIndex === 2) {
-      return (
-        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
-          <div className="flex items-center justify-between px-4 pt-4 pb-3">
-            <div>
-              <p className={`text-[10px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Opportunities</p>
-              <h3 className={`text-xs font-bold mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Events & Projects 🚀</h3>
+              <button onClick={() => onSendConnectionRequest?.(u.id)} className="w-full py-1 rounded-lg bg-indigo-500 text-white text-[10px] font-bold hover:bg-indigo-600 transition-all cursor-pointer">+ Connect</button>
             </div>
-            <button onClick={dismiss} className={`text-[10px] px-2 py-1 rounded-lg ${dm ? 'text-slate-500 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'} transition-all cursor-pointer`}>✕</button>
-          </div>
-          <div className="grid grid-cols-2 gap-3 px-4 pb-4">
-            <button onClick={() => onNavigate?.('events')} className="rounded-xl p-3 bg-gradient-to-br from-rose-500 to-pink-600 text-white text-left hover:opacity-90 transition-all cursor-pointer group">
-              <div className="text-xl mb-1">📅</div>
-              <p className="text-[11px] font-bold">Campus Events</p>
-              <p className="text-[9px] opacity-80 mt-0.5">Hackathons, workshops & more</p>
-              <div className="text-[10px] mt-2 font-semibold opacity-90 group-hover:translate-x-1 transition-transform">Explore →</div>
-            </button>
-            <button onClick={() => onNavigate?.('projects')} className="rounded-xl p-3 bg-gradient-to-br from-amber-500 to-orange-500 text-white text-left hover:opacity-90 transition-all cursor-pointer group">
-              <div className="text-xl mb-1">🛠️</div>
-              <p className="text-[11px] font-bold">Open Projects</p>
-              <p className="text-[9px] opacity-80 mt-0.5">Find your next collaboration</p>
-              <div className="text-[10px] mt-2 font-semibold opacity-90 group-hover:translate-x-1 transition-transform">Join →</div>
-            </button>
-          </div>
-        </div>
-      );
-    }
+          ))}
+      </SuggCard>
+    );
 
-    if (typeIndex === 3) {
-      return (
-        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
-          <div className="relative bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-5">
-            <button onClick={dismiss} className="absolute top-3 right-3 text-white/60 hover:text-white text-[10px] px-2 py-1 rounded-lg hover:bg-white/10 transition-all cursor-pointer">✕</button>
-            <p className="text-[10px] font-mono text-white/60 uppercase tracking-widest mb-1">Discover</p>
-            <h3 className="text-sm font-extrabold text-white">Explore Your Campus 🎓</h3>
-            <p className="text-[11px] text-white/70 mt-1">Find students, colleges, groups, and opportunities across The Network</p>
-          </div>
-          <div className="grid grid-cols-3 divide-x p-0 overflow-hidden" style={{borderTop: dm ? '1px solid rgba(255,255,255,0.05)' : '1px solid #f0f0f0'}}>
-            {[
-              { icon: '🔍', label: 'Discover', view: 'explore' },
-              { icon: '💬', label: 'Groups', view: 'messages' },
-              { icon: '🏫', label: 'Colleges', view: 'colleges' },
-            ].map(item => (
-              <button key={item.view} onClick={() => onNavigate?.(item.view)} className={`flex flex-col items-center gap-1.5 py-3 text-center hover:bg-white/5 transition-all cursor-pointer divide-x ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
-                <span className="text-lg">{item.icon}</span>
-                <span className={`text-[10px] font-bold ${dm ? 'text-slate-300' : 'text-slate-600'}`}>{item.label}</span>
+    // TYPE 1 — Upcoming Events (real data)
+    if (typeIndex === 1) return (
+      <SuggCard keyVal={key} header="Upcoming Events 📅" sub="Don't miss out" accentColor={dm ? 'text-rose-400 hover:text-rose-300' : 'text-rose-600 hover:text-rose-700'} seeAllView="events" seeAllLabel="See all campus events">
+        {suggestEvents.length === 0
+          ? <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>No upcoming events right now</p>
+          : suggestEvents.map(ev => {
+            const isRegistered = registeredFromFeed.has(ev.id) || ev.registeredIds.includes(currentUser.id);
+            const eventDate = new Date(ev.date);
+            const daysLeft = Math.ceil((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            return (
+              <div key={ev.id} className={`shrink-0 w-48 rounded-xl border overflow-hidden flex flex-col ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
+                <div className={`px-3 pt-2.5 pb-2 bg-gradient-to-br ${ev.category === 'Hackathon' ? 'from-violet-600 to-indigo-700' : ev.category === 'Workshop' ? 'from-teal-500 to-cyan-600' : ev.category === 'Cultural' ? 'from-pink-500 to-rose-600' : 'from-amber-500 to-orange-500'}`}>
+                  <p className="text-white text-[9px] font-mono uppercase tracking-wider opacity-80">{ev.category || 'Event'}</p>
+                  <p className="text-white text-[11px] font-bold leading-tight mt-0.5 line-clamp-2">{ev.title}</p>
+                </div>
+                <div className="px-3 pt-2 pb-1 flex-1 flex flex-col gap-1">
+                  <p className={`text-[9px] font-mono ${dm ? 'text-slate-400' : 'text-slate-500'}`}>📅 {eventDate.toLocaleDateString(undefined, {month:'short', day:'numeric'})} {ev.time && `· ${ev.time}`}</p>
+                  {ev.venue && <p className={`text-[9px] truncate ${dm ? 'text-slate-500' : 'text-slate-400'}`}>📍 {ev.venue}</p>}
+                  {daysLeft > 0 && daysLeft <= 7 && <p className="text-[8px] font-bold text-amber-500">⏰ {daysLeft}d left</p>}
+                  {ev.maxSeats && <p className={`text-[8px] ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{ev.registeredIds.length}/{ev.maxSeats} seats</p>}
+                </div>
+                <div className="px-3 pb-3">
+                  <button onClick={async () => {
+                    try { await api.events.register(ev.id, currentUser.id); setRegisteredFromFeed(prev => new Set([...prev, ev.id])); } catch {}
+                  }} disabled={isRegistered} className={`w-full py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${isRegistered ? (dm ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-400') : 'bg-rose-500 text-white hover:bg-rose-600'}`}>
+                    {isRegistered ? '✓ Registered' : 'Register'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+      </SuggCard>
+    );
+
+    // TYPE 2 — Clubs to Join (real data)
+    if (typeIndex === 2) return (
+      <SuggCard keyVal={key} header="Join a Club 🏛️" sub="Campus clubs for you" accentColor={dm ? 'text-violet-400 hover:text-violet-300' : 'text-violet-600 hover:text-violet-700'} seeAllView="communities" seeAllLabel="Browse all clubs">
+        {(suggestClubs.length > 0 ? suggestClubs : suggestCommunities).length === 0
+          ? <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You've joined all clubs! 🏆</p>
+          : (suggestClubs.length > 0 ? suggestClubs : suggestCommunities).map(c => (
+            <div key={c.id} className={`shrink-0 w-36 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center text-2xl ${dm ? 'bg-white/10' : 'bg-violet-50'}`}>{c.icon}</div>
+              <div className="w-full">
+                <p className={`text-[11px] font-bold truncate ${dm ? 'text-white' : 'text-slate-900'}`}>{c.name}</p>
+                <p className={`text-[9px] mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{c.memberIds.length} members</p>
+                {c.tags.slice(0,1).map(t => <span key={t} className="inline-block text-[8px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-500 font-mono mt-0.5">{t}</span>)}
+              </div>
+              <button onClick={() => { setJoinedFromFeed(prev => new Set([...prev, c.id])); onNavigate?.('communities'); }} className={`w-full py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${joinedFromFeed.has(c.id) ? (dm ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-400') : 'bg-violet-500 text-white hover:bg-violet-600'}`}>
+                {joinedFromFeed.has(c.id) ? '✓ Joined' : 'Join'}
               </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
+            </div>
+          ))}
+      </SuggCard>
+    );
+
+    // TYPE 3 — Open Projects (real data)
+    if (typeIndex === 3) return (
+      <SuggCard keyVal={key} header="Open Projects 🛠️" sub="Collaborate & build" accentColor={dm ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'} seeAllView="projects" seeAllLabel="Browse all projects">
+        {suggestProjects.length === 0
+          ? <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>No open projects right now</p>
+          : suggestProjects.map(p => {
+            const creator = allUsers.find(u => u.id === p.creatorId);
+            const stageColors: Record<string, string> = { Idea: 'from-sky-500 to-blue-600', Building: 'from-amber-500 to-orange-500', MVP: 'from-emerald-500 to-teal-600', Launched: 'from-violet-500 to-purple-600' };
+            return (
+              <div key={p.id} className={`shrink-0 w-52 rounded-xl border overflow-hidden flex flex-col ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
+                <div className={`px-3 pt-2.5 pb-2 bg-gradient-to-br ${stageColors[p.stage] || 'from-slate-500 to-slate-600'}`}>
+                  <span className="text-white text-[8px] font-mono uppercase tracking-widest opacity-80">{p.stage}</span>
+                  <p className="text-white text-[11px] font-bold leading-tight mt-0.5 line-clamp-2">{p.title}</p>
+                </div>
+                <div className="px-3 pt-2 pb-1 flex-1 flex flex-col gap-1.5">
+                  {creator && <p className={`text-[9px] ${dm ? 'text-slate-400' : 'text-slate-500'}`}>by {creator.fullName.split(' ')[0]}</p>}
+                  <div className="flex flex-wrap gap-1">
+                    {p.tags.slice(0,2).map(t => <span key={t} className={`text-[8px] px-1.5 py-0.5 rounded font-mono ${dm ? 'bg-white/10 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{t}</span>)}
+                  </div>
+                  {p.lookingFor.length > 0 && <p className={`text-[8px] font-medium ${dm ? 'text-amber-400' : 'text-amber-600'}`}>Looking for: {p.lookingFor[0]}</p>}
+                  <p className={`text-[8px] ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{p.memberIds.length} member{p.memberIds.length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="px-3 pb-3">
+                  <button onClick={() => onNavigate?.('projects')} className="w-full py-1.5 rounded-lg bg-amber-500 text-white text-[10px] font-bold hover:bg-amber-600 transition-all cursor-pointer">View Project</button>
+                </div>
+              </div>
+            );
+          })}
+      </SuggCard>
+    );
+
+    // TYPE 4 — Communities (real data)
+    if (typeIndex === 4) return (
+      <SuggCard keyVal={key} header="Communities 💬" sub="Find your tribe" accentColor={dm ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'} seeAllView="communities" seeAllLabel="Browse all communities">
+        {suggestCommunities.length === 0
+          ? <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You've joined everything! 🎉</p>
+          : suggestCommunities.map(c => (
+            <div key={c.id} className={`shrink-0 w-36 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center text-2xl ${dm ? 'bg-white/10' : 'bg-emerald-50'}`}>{c.icon}</div>
+              <div className="w-full">
+                <p className={`text-[11px] font-bold truncate ${dm ? 'text-white' : 'text-slate-900'}`}>{c.name}</p>
+                <p className={`text-[9px] mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{c.memberIds.length} members · {c.category}</p>
+              </div>
+              <button onClick={() => onNavigate?.('communities')} className="w-full py-1 rounded-lg bg-emerald-500 text-white text-[10px] font-bold hover:bg-emerald-600 transition-all cursor-pointer">Join</button>
+            </div>
+          ))}
+      </SuggCard>
+    );
 
     return null;
   };
@@ -847,7 +900,7 @@ export default function FeedSection({
               );
 
               const shouldInject = (postIndex + 1) % 3 === 0;
-              const suggTypeIndex = (Math.floor((postIndex + 1) / 3) - 1) % 4;
+              const suggTypeIndex = (Math.floor((postIndex + 1) / 3) - 1) % 5;
               const suggCard = shouldInject ? renderSuggestionCard(suggTypeIndex, `sugg-${postIndex}`) : null;
               return [postCard, ...(suggCard ? [suggCard] : [])];
             })
