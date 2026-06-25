@@ -206,39 +206,57 @@ export default function FeedSection({
     return true;
   });
 
-  // Smart co-founder matching — score based on shared interests, complementary skills, shared lookingFor
   const connectedUserIds = new Set(
     connections
       .filter(c => (c.senderId === currentUser.id || c.receiverId === currentUser.id))
       .map(c => c.senderId === currentUser.id ? c.receiverId : c.senderId)
   );
 
-  const scoredMatches = allUsers
-    .filter(u => u.id !== currentUser.id && !u.isSuspended && !connectedUserIds.has(u.id))
+  const dm = darkMode;
+
+  const STUDY_KEYWORDS = ['study', 'research', 'exam', 'notes', 'academics', 'learn', 'tutor', 'peer'];
+  const STARTUP_KEYWORDS = ['startup', 'founder', 'venture', 'product', 'business', 'entrepreneur', 'mvp', 'saas'];
+
+  const eligibleUsers = allUsers.filter(u => u.id !== currentUser.id && !u.isSuspended && !connectedUserIds.has(u.id));
+
+  // TYPE 6 — Study Partners: same college + study interests + lookingFor Study Partner
+  const studyPartners = eligibleUsers
     .map(u => {
       let score = 0;
-      const sharedInterests = u.interests.filter(i => currentUser.interests.includes(i)).length;
-      const sharedLookingFor = u.lookingFor.filter(l => currentUser.lookingFor.includes(l)).length;
-      const complementarySkills = u.skills.filter(s => !currentUser.skills.includes(s) && currentUser.lookingFor.some(l => s.toLowerCase().includes(l.toLowerCase().substring(0, 4)))).length;
-      score += sharedInterests * 2;
-      score += sharedLookingFor * 2;
-      score += complementarySkills;
-      if (u.college === currentUser.college) score += 1;
-      return { user: u, score };
+      if (u.college === currentUser.college) score += 5;
+      score += u.interests.filter(i => STUDY_KEYWORDS.some(k => i.toLowerCase().includes(k))).length * 3;
+      score += u.lookingFor.filter(l => l.toLowerCase().includes('study') || l.toLowerCase().includes('partner') || l.toLowerCase().includes('research')).length * 4;
+      score += u.interests.filter(i => currentUser.interests.includes(i)).length * 2;
+      if (u.branch && u.branch === currentUser.branch) score += 3;
+      return { u, score };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map(m => m.user);
+    .slice(0, 8)
+    .map(x => x.u);
 
-  // Suggestion cards injected between posts (Instagram-style)
-  const dm = darkMode;
-  const suggestPeople = allUsers
-    .filter(u => u.id !== currentUser.id && !u.isSuspended && !connectedUserIds.has(u.id))
+  // TYPE 7 — Friendship: shared hobbies + same batch/year
+  const friendSuggestions = eligibleUsers
     .map(u => {
       let score = 0;
       score += u.interests.filter(i => currentUser.interests.includes(i)).length * 3;
-      score += u.lookingFor.filter(l => currentUser.lookingFor.includes(l)).length * 2;
-      if (u.college === currentUser.college) score += 2;
+      if (u.college === currentUser.college) score += 3;
+      if (u.year && u.year === (currentUser as any).year) score += 2;
+      score += u.lookingFor.filter(l => l.toLowerCase().includes('friend') || l.toLowerCase().includes('network') || l.toLowerCase().includes('connect')).length * 2;
+      return { u, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(x => x.u);
+
+  // TYPE 8 — Co-Founders: startup focus + complementary skills
+  const coFounderSuggestions = eligibleUsers
+    .map(u => {
+      let score = 0;
+      score += u.interests.filter(i => STARTUP_KEYWORDS.some(k => i.toLowerCase().includes(k))).length * 3;
+      score += u.lookingFor.filter(l => l.toLowerCase().includes('co-founder') || l.toLowerCase().includes('cofounder') || l.toLowerCase().includes('startup') || l.toLowerCase().includes('partner')).length * 5;
+      const complementarySkills = u.skills.filter(s => !currentUser.skills.includes(s)).length;
+      score += complementarySkills;
+      if (u.isVerified) score += 1;
       return { u, score };
     })
     .sort((a, b) => b.score - a.score)
@@ -246,7 +264,6 @@ export default function FeedSection({
     .map(x => x.u);
 
   const suggestCommunities = communities.filter(c => !c.memberIds.includes(currentUser.id)).slice(0, 8);
-
   const suggestProjects = feedProjects
     .filter(p => p.creatorId !== currentUser.id && !p.memberIds.includes(currentUser.id))
     .slice(0, 6);
@@ -280,46 +297,180 @@ export default function FeedSection({
   const renderSuggestionCard = (typeIndex: number, key: string) => {
     if (dismissedSuggestions.has(typeIndex)) return null;
 
-    // TYPE 0 — People You May Know
-    if (typeIndex === 0) {
+    // TYPE 6 — Study Partners
+    if (typeIndex === 6) {
+      const people = studyPartners;
       return (
-        <SuggCard key={key} typeIndex={typeIndex}>
-          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+        <div key={key} className={`rounded-2xl border overflow-hidden shadow-sm ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}>
+          <div className="flex items-center justify-between px-4 pt-4 pb-1">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center"><UserPlus size={12} className="text-indigo-500" /></div>
+              <div className="w-7 h-7 rounded-xl bg-blue-500/10 flex items-center justify-center"><span className="text-sm">📚</span></div>
               <div>
-                <p className={`text-[9px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Suggested for you</p>
-                <h3 className={`text-xs font-bold leading-none mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>People You May Know 🤝</h3>
+                <p className={`text-[9px] font-mono uppercase tracking-widest ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Find your study crew</p>
+                <h3 className={`text-sm font-extrabold leading-none mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Study Partners</h3>
               </div>
             </div>
-            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer">See all</button>
+            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-blue-500 hover:text-blue-400 cursor-pointer flex items-center gap-0.5">See all →</button>
           </div>
-          <div className="flex gap-3 overflow-x-auto px-4 pb-4 no-scrollbar">
-            {suggestPeople.length === 0 ? (
-              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You're well connected! 🎉</p>
-            ) : suggestPeople.map(u => {
-              const shared = u.interests.filter(i => currentUser.interests.includes(i)).length + u.lookingFor.filter(l => currentUser.lookingFor.includes(l)).length;
+          <div className="flex gap-3 overflow-x-auto px-4 py-3 no-scrollbar">
+            {people.length === 0 ? (
+              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>No study partners found yet.</p>
+            ) : people.map(u => {
+              const sharedInterests = u.interests.filter(i => currentUser.interests.includes(i));
               return (
-                <div key={u.id} className={`shrink-0 w-32 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/8 bg-white/4' : 'border-neutral-100 bg-slate-50/80'}`}>
-                  <div className="relative">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer" onClick={() => onViewUserProfile?.(u.id)}>
-                      <Avatar avatar={u.avatar} />
+                <div key={u.id} className={`shrink-0 w-40 rounded-2xl border overflow-hidden flex flex-col ${dm ? 'border-white/8 bg-white/4' : 'border-neutral-100 bg-white'}`} style={{boxShadow: dm ? 'none' : '0 1px 8px rgba(0,0,0,0.06)'}}>
+                  <div className="relative h-24 bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center bg-white/20">
+                      <Avatar avatar={u.avatar} size={64} />
                     </div>
-                    {u.isVerified && <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold">✓</span>}
+                    {u.isVerified && <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold shadow">✓</span>}
+                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-blue-500 text-white text-[8px] font-bold">📚 Study Partner</span>
                   </div>
-                  <div className="w-full">
-                    <p className={`text-[11px] font-bold truncate cursor-pointer hover:underline ${dm ? 'text-white' : 'text-slate-900'}`} onClick={() => onViewUserProfile?.(u.id)}>{u.fullName.split(' ')[0]}</p>
-                    <p className={`text-[9px] truncate mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{u.college?.split(' ').slice(0,2).join(' ') || 'Student'}</p>
-                    {shared > 0 && <p className="text-[8px] text-indigo-500 font-semibold mt-0.5">{shared} shared {shared === 1 ? 'interest' : 'interests'}</p>}
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    <div>
+                      <p className={`text-xs font-bold truncate cursor-pointer hover:underline ${dm ? 'text-white' : 'text-slate-900'}`} onClick={() => onViewUserProfile?.(u.id)}>{u.fullName}</p>
+                      <p className={`text-[10px] truncate mt-0.5 ${dm ? 'text-slate-400' : 'text-slate-500'}`}>{u.college?.split(' ').slice(0,3).join(' ')}</p>
+                      {u.branch && <p className={`text-[9px] truncate ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{u.branch}</p>}
+                    </div>
+                    {sharedInterests.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {sharedInterests.slice(0,2).map(i => (
+                          <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">{i}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-1.5 mt-auto">
+                      <button onClick={() => onSendConnectionRequest?.(u.id)} className="flex-1 py-1.5 rounded-xl bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 transition-all cursor-pointer">Connect</button>
+                      <button onClick={() => onViewUserProfile?.(u.id)} className={`px-2 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border ${dm ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-neutral-200 text-slate-600 hover:bg-slate-50'}`}>View</button>
+                    </div>
                   </div>
-                  <button onClick={() => onSendConnectionRequest?.(u.id)} className="w-full py-1.5 rounded-lg bg-indigo-500 text-white text-[10px] font-bold hover:bg-indigo-600 transition-all cursor-pointer">
-                    + Connect
-                  </button>
                 </div>
               );
             })}
           </div>
-        </SuggCard>
+          <div className={`px-4 pb-3 pt-1 flex items-center justify-between border-t ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+            <button onClick={() => setDismissedSuggestions(prev => new Set([...prev, typeIndex]))} className={`text-[10px] ${dm ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'} transition-all cursor-pointer`}>Not interested</button>
+            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-blue-500 hover:text-blue-400 cursor-pointer">Find study partners →</button>
+          </div>
+        </div>
+      );
+    }
+
+    // TYPE 7 — Friendship Suggestions
+    if (typeIndex === 7) {
+      const people = friendSuggestions;
+      return (
+        <div key={key} className={`rounded-2xl border overflow-hidden shadow-sm ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}>
+          <div className="flex items-center justify-between px-4 pt-4 pb-1">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-pink-500/10 flex items-center justify-center"><span className="text-sm">👋</span></div>
+              <div>
+                <p className={`text-[9px] font-mono uppercase tracking-widest ${dm ? 'text-slate-500' : 'text-slate-400'}`}>People like you</p>
+                <h3 className={`text-sm font-extrabold leading-none mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Make Friends</h3>
+              </div>
+            </div>
+            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-pink-500 hover:text-pink-400 cursor-pointer">See all →</button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 py-3 no-scrollbar">
+            {people.length === 0 ? (
+              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You know everyone! 🎉</p>
+            ) : people.map(u => {
+              const sharedInterests = u.interests.filter(i => currentUser.interests.includes(i));
+              return (
+                <div key={u.id} className={`shrink-0 w-40 rounded-2xl border overflow-hidden flex flex-col ${dm ? 'border-white/8 bg-white/4' : 'border-neutral-100 bg-white'}`} style={{boxShadow: dm ? 'none' : '0 1px 8px rgba(0,0,0,0.06)'}}>
+                  <div className="relative h-24 bg-gradient-to-br from-pink-400 to-rose-600 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center bg-white/20">
+                      <Avatar avatar={u.avatar} size={64} />
+                    </div>
+                    {u.isVerified && <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold shadow">✓</span>}
+                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-pink-500 text-white text-[8px] font-bold">👋 Friendship</span>
+                  </div>
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    <div>
+                      <p className={`text-xs font-bold truncate cursor-pointer hover:underline ${dm ? 'text-white' : 'text-slate-900'}`} onClick={() => onViewUserProfile?.(u.id)}>{u.fullName}</p>
+                      <p className={`text-[10px] truncate mt-0.5 ${dm ? 'text-slate-400' : 'text-slate-500'}`}>{u.college?.split(' ').slice(0,3).join(' ')}</p>
+                      {sharedInterests.length > 0 && <p className="text-[9px] text-pink-500 font-semibold">{sharedInterests.length} shared interest{sharedInterests.length > 1 ? 's' : ''}</p>}
+                    </div>
+                    {sharedInterests.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {sharedInterests.slice(0,2).map(i => (
+                          <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 font-medium">{i}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-1.5 mt-auto">
+                      <button onClick={() => onSendConnectionRequest?.(u.id)} className="flex-1 py-1.5 rounded-xl bg-pink-500 text-white text-[10px] font-bold hover:bg-pink-600 transition-all cursor-pointer">Follow</button>
+                      <button onClick={() => onViewUserProfile?.(u.id)} className={`px-2 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border ${dm ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-neutral-200 text-slate-600 hover:bg-slate-50'}`}>View</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className={`px-4 pb-3 pt-1 flex items-center justify-between border-t ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+            <button onClick={() => setDismissedSuggestions(prev => new Set([...prev, typeIndex]))} className={`text-[10px] ${dm ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'} transition-all cursor-pointer`}>Not interested</button>
+            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-pink-500 hover:text-pink-400 cursor-pointer">Find friends →</button>
+          </div>
+        </div>
+      );
+    }
+
+    // TYPE 8 — Co-Founders
+    if (typeIndex === 8) {
+      const people = coFounderSuggestions;
+      return (
+        <div key={key} className={`rounded-2xl border overflow-hidden shadow-sm ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}>
+          <div className="flex items-center justify-between px-4 pt-4 pb-1">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-violet-500/10 flex items-center justify-center"><span className="text-sm">🚀</span></div>
+              <div>
+                <p className={`text-[9px] font-mono uppercase tracking-widest ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Build together</p>
+                <h3 className={`text-sm font-extrabold leading-none mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Find Co-Founders</h3>
+              </div>
+            </div>
+            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-violet-500 hover:text-violet-400 cursor-pointer">See all →</button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 py-3 no-scrollbar">
+            {people.length === 0 ? (
+              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>No co-founder matches yet.</p>
+            ) : people.map(u => {
+              const complementarySkills = u.skills.filter(s => !currentUser.skills.includes(s)).slice(0, 2);
+              return (
+                <div key={u.id} className={`shrink-0 w-40 rounded-2xl border overflow-hidden flex flex-col ${dm ? 'border-white/8 bg-white/4' : 'border-neutral-100 bg-white'}`} style={{boxShadow: dm ? 'none' : '0 1px 8px rgba(0,0,0,0.06)'}}>
+                  <div className="relative h-24 bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center bg-white/20">
+                      <Avatar avatar={u.avatar} size={64} />
+                    </div>
+                    {u.isVerified && <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold shadow">✓</span>}
+                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-violet-600 text-white text-[8px] font-bold">🚀 Co-Founder</span>
+                  </div>
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    <div>
+                      <p className={`text-xs font-bold truncate cursor-pointer hover:underline ${dm ? 'text-white' : 'text-slate-900'}`} onClick={() => onViewUserProfile?.(u.id)}>{u.fullName}</p>
+                      <p className={`text-[10px] truncate mt-0.5 ${dm ? 'text-slate-400' : 'text-slate-500'}`}>{u.college?.split(' ').slice(0,3).join(' ')}</p>
+                      {complementarySkills.length > 0 && <p className="text-[9px] text-violet-500 font-semibold">Has skills you need</p>}
+                    </div>
+                    {complementarySkills.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {complementarySkills.map(s => (
+                          <span key={s} className="text-[8px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium">{s}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-1.5 mt-auto">
+                      <button onClick={() => onSendConnectionRequest?.(u.id)} className="flex-1 py-1.5 rounded-xl bg-violet-600 text-white text-[10px] font-bold hover:bg-violet-700 transition-all cursor-pointer">Connect</button>
+                      <button onClick={() => onViewUserProfile?.(u.id)} className={`px-2 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border ${dm ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-neutral-200 text-slate-600 hover:bg-slate-50'}`}>View</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className={`px-4 pb-3 pt-1 flex items-center justify-between border-t ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+            <button onClick={() => setDismissedSuggestions(prev => new Set([...prev, typeIndex]))} className={`text-[10px] ${dm ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'} transition-all cursor-pointer`}>Not interested</button>
+            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-violet-500 hover:text-violet-400 cursor-pointer">Find co-founders →</button>
+          </div>
+        </div>
       );
     }
 
@@ -1065,7 +1216,8 @@ export default function FeedSection({
               );
 
               const shouldInject = true;
-              const FEED_TYPES = [5, 1, 3]; // Explore Campus → Communities → Campus Groups
+              // Priority: Study Partners → Friendship → Co-Founders → Groups → Events → Communities → Explore Campus
+              const FEED_TYPES = [6, 7, 8, 3, 4, 1, 5];
               const suggTypeIndex = FEED_TYPES[postIndex % FEED_TYPES.length];
               const suggCard = shouldInject ? renderSuggestionCard(suggTypeIndex, `sugg-${postIndex}`) : null;
               return [postCard, ...(suggCard ? [suggCard] : [])];
