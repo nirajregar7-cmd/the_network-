@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   X, Send, Image as ImageIcon, FileText, Calendar, Rocket,
   Users, MessageSquare, Video, Plus, Trash2, Globe, MapPin,
-  Cpu, Hash, Zap, ChevronDown
+  Cpu, Hash, Zap, ChevronDown, Star
 } from 'lucide-react';
 import { api } from '../api';
 import Avatar from './Avatar';
@@ -29,13 +29,14 @@ interface Props {
   onStoryCreated: (story: any) => void;
 }
 
-type Tab = 'post' | 'event' | 'project' | 'community' | 'group' | 'reel';
+type Tab = 'post' | 'event' | 'project' | 'community' | 'group' | 'reel' | 'club';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode; color: string }[] = [
   { id: 'post',      label: 'Post',      icon: <FileText size={14} />,     color: 'indigo' },
   { id: 'event',     label: 'Event',     icon: <Calendar size={14} />,     color: 'rose' },
   { id: 'project',   label: 'Project',   icon: <Rocket size={14} />,       color: 'amber' },
   { id: 'community', label: 'Community', icon: <Users size={14} />,        color: 'emerald' },
+  { id: 'club',      label: 'Club',      icon: <Star size={14} />,         color: 'violet' },
   { id: 'group',     label: 'Group',     icon: <MessageSquare size={14} />, color: 'sky' },
   { id: 'reel',      label: 'Reel',      icon: <Video size={14} />,        color: 'pink' },
 ];
@@ -62,6 +63,17 @@ const GROUP_TYPES = [
   { value: 'branch', label: 'Branch Circle', icon: '🔧' },
   { value: 'batch', label: 'Batch Group', icon: '🎓' },
 ];
+const CLUB_TYPES = [
+  { value: 'technical', label: 'Technical', icon: '⚙️' },
+  { value: 'cultural', label: 'Cultural', icon: '🎭' },
+  { value: 'sports', label: 'Sports', icon: '⚽' },
+  { value: 'entrepreneurship', label: 'Entrepreneurship', icon: '🚀' },
+  { value: 'research', label: 'Research', icon: '🔬' },
+  { value: 'social', label: 'Social Service', icon: '🤝' },
+  { value: 'arts', label: 'Arts & Media', icon: '🎨' },
+  { value: 'general', label: 'General', icon: '🏛️' },
+];
+const CLUB_ICONS = ['🏛️','⚙️','🎭','⚽','🚀','🔬','🤝','🎨','🏆','🎵','📸','🌱'];
 
 function inputCls(dark: boolean) {
   return `w-full px-3 py-2 rounded-xl border text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${
@@ -117,6 +129,13 @@ export default function CreateModal({ onClose, currentUser, communities, darkMod
 
   const [reelContent, setReelContent] = useState('');
   const [reelImage, setReelImage] = useState('');
+
+  const [clubName, setClubName] = useState('');
+  const [clubDesc, setClubDesc] = useState('');
+  const [clubType, setClubType] = useState('general');
+  const [clubIcon, setClubIcon] = useState('🏛️');
+  const [clubTags, setClubTags] = useState('');
+  const [clubOpen, setClubOpen] = useState(true);
 
   const dm = darkMode;
 
@@ -223,11 +242,30 @@ export default function CreateModal({ onClose, currentUser, communities, darkMod
     } catch { setSaving(false); }
   };
 
+  const handleClub = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clubName.trim()) return;
+    setSaving(true);
+    try {
+      const created = await api.communities.create({
+        name: clubName.trim(),
+        description: clubDesc.trim(),
+        icon: clubIcon,
+        category: 'Club',
+        tags: [clubType, ...(clubTags.split(',').map(t => t.trim()).filter(Boolean)), clubOpen ? 'Open' : 'Invite Only'],
+        creatorId: currentUser.id,
+      });
+      onCommunityCreated(created);
+      showSuccess('Club created! 🏛️');
+    } catch { setSaving(false); }
+  };
+
   const tabColor: Record<Tab, string> = {
     post: 'from-indigo-500 to-violet-600',
     event: 'from-rose-500 to-pink-600',
     project: 'from-amber-500 to-orange-500',
     community: 'from-emerald-500 to-teal-600',
+    club: 'from-violet-500 to-purple-600',
     group: 'from-sky-500 to-cyan-600',
     reel: 'from-pink-500 to-fuchsia-600',
   };
@@ -522,6 +560,63 @@ export default function CreateModal({ onClose, currentUser, communities, darkMod
                   <span className="font-bold text-[10px] uppercase tracking-wide">Auto-added</span>
                 </div>
                 You'll be added as admin. Your college: <span className="font-bold text-indigo-400">{currentUser.college}</span>
+              </div>
+            </form>
+          )}
+
+          {/* ── CLUB ── */}
+          {activeTab === 'club' && (
+            <form id="form-create" onSubmit={handleClub} className="space-y-3">
+              <div className={`p-3 rounded-xl border text-[10px] font-mono ${dm ? 'border-violet-500/20 bg-violet-500/5 text-violet-400' : 'border-violet-200 bg-violet-50 text-violet-600'}`}>
+                🏛️ Clubs are official campus groups — technical, cultural, sports, and more
+              </div>
+              <div>
+                <label className={labelCls()}>Club name *</label>
+                <input required value={clubName} onChange={e => setClubName(e.target.value)} placeholder="e.g. NIT Trichy Coding Club, Robotics Society..." className={inputCls(dm)} />
+              </div>
+              <div>
+                <label className={labelCls()}>About the club</label>
+                <textarea rows={3} value={clubDesc} onChange={e => setClubDesc(e.target.value)} placeholder="What does this club do? Who should join?" className={`${inputCls(dm)} resize-none`} />
+              </div>
+              <div>
+                <label className={labelCls()}>Club type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CLUB_TYPES.map(t => (
+                    <button key={t.value} type="button" onClick={() => setClubType(t.value)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all text-left ${clubType === t.value ? `bg-gradient-to-r ${tabColor['club']} text-white border-transparent` : dm ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10' : 'bg-slate-50 border-neutral-200 text-slate-700 hover:bg-slate-100'}`}>
+                      <span>{t.icon}</span>
+                      <span className="text-[11px] font-bold">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className={labelCls()}>Club icon</label>
+                <div className="flex flex-wrap gap-2">
+                  {CLUB_ICONS.map(icon => (
+                    <button key={icon} type="button" onClick={() => setClubIcon(icon)}
+                      className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center cursor-pointer border transition-all ${clubIcon === icon ? 'border-violet-500 bg-violet-500/10 scale-110' : dm ? 'border-white/10 bg-white/5 hover:bg-white/10' : 'border-neutral-200 bg-slate-50 hover:bg-slate-100'}`}>
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className={labelCls()}>Tags (comma separated)</label>
+                <input value={clubTags} onChange={e => setClubTags(e.target.value)} placeholder="e.g. NIT Trichy, Open Source, Competitive Programming" className={inputCls(dm)} />
+              </div>
+              <div>
+                <label className={labelCls()}>Membership</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setClubOpen(true)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all ${clubOpen ? `bg-gradient-to-r ${tabColor['club']} text-white border-transparent` : dm ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-neutral-200 text-slate-600'}`}>
+                    🌐 Open — Anyone can join
+                  </button>
+                  <button type="button" onClick={() => setClubOpen(false)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all ${!clubOpen ? `bg-gradient-to-r ${tabColor['club']} text-white border-transparent` : dm ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-neutral-200 text-slate-600'}`}>
+                    🔒 Invite Only
+                  </button>
+                </div>
               </div>
             </form>
           )}
