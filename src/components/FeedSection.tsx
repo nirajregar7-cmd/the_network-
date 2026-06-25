@@ -51,6 +51,7 @@ interface FeedSectionProps {
   onViewUserProfile?: (userId: string) => void;
   onReactToStory?: (storyId: string, emoji: string) => void;
   onSendConnectionRequest?: (receiverId: string) => void;
+  onNavigate?: (view: string) => void;
 }
 
 const POST_PRESETS = [
@@ -80,6 +81,7 @@ export default function FeedSection({
   onViewUserProfile,
   onReactToStory,
   onSendConnectionRequest,
+  onNavigate,
 }: FeedSectionProps) {
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedTag, setSelectedTag] = useState('Startup Pitch 🚀');
@@ -217,6 +219,147 @@ export default function FeedSection({
     .sort((a, b) => b.score - a.score)
     .slice(0, 4)
     .map(m => m.user);
+
+  // Suggestion cards injected between posts (Instagram-style)
+  const dm = darkMode;
+  const suggestPeople = allUsers
+    .filter(u => u.id !== currentUser.id && !u.isSuspended && !connectedUserIds.has(u.id))
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 6);
+  const suggestCommunities = communities.filter(c => !c.memberIds.includes(currentUser.id)).slice(0, 8);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
+
+  const renderSuggestionCard = (typeIndex: number, key: string) => {
+    if (dismissedSuggestions.has(typeIndex)) return null;
+    const dismiss = () => setDismissedSuggestions(prev => new Set([...prev, typeIndex]));
+
+    if (typeIndex === 0) {
+      return (
+        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <div>
+              <p className={`text-[10px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Suggested for you</p>
+              <h3 className={`text-xs font-bold mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>People You May Know 🤝</h3>
+            </div>
+            <button onClick={dismiss} className={`text-[10px] px-2 py-1 rounded-lg ${dm ? 'text-slate-500 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'} transition-all cursor-pointer`}>✕</button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-4 pt-1 scrollbar-hide">
+            {suggestPeople.length === 0 ? (
+              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You're well connected! 🎉</p>
+            ) : suggestPeople.map(u => (
+              <div key={u.id} className={`shrink-0 w-32 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer" onClick={() => onViewUserProfile?.(u.id)}>
+                  <Avatar avatar={u.avatar} />
+                </div>
+                <div className="w-full">
+                  <p className={`text-[11px] font-bold truncate cursor-pointer hover:underline ${dm ? 'text-white' : 'text-slate-900'}`} onClick={() => onViewUserProfile?.(u.id)}>{u.fullName.split(' ')[0]}</p>
+                  <p className={`text-[9px] truncate mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{u.college?.split(' ').slice(0,2).join(' ') || 'Student'}</p>
+                </div>
+                <button onClick={() => onSendConnectionRequest?.(u.id)} className="w-full py-1 rounded-lg bg-indigo-500 text-white text-[10px] font-bold hover:bg-indigo-600 transition-all cursor-pointer">
+                  + Connect
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className={`px-4 pb-3 border-t pt-2 ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+            <button onClick={() => onNavigate?.('explore')} className={`text-[11px] font-semibold ${dm ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'} transition-all cursor-pointer`}>
+              Discover more students on campus →
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (typeIndex === 1) {
+      return (
+        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <div>
+              <p className={`text-[10px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Join the Buzz</p>
+              <h3 className={`text-xs font-bold mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Clubs & Communities 🏛️</h3>
+            </div>
+            <button onClick={dismiss} className={`text-[10px] px-2 py-1 rounded-lg ${dm ? 'text-slate-500 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'} transition-all cursor-pointer`}>✕</button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-4 pt-1 scrollbar-hide">
+            {suggestCommunities.length === 0 ? (
+              <p className={`text-xs py-4 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>You've joined all communities 🎉</p>
+            ) : suggestCommunities.map(c => (
+              <div key={c.id} className={`shrink-0 w-36 rounded-xl border p-3 flex flex-col items-center gap-2 text-center ${dm ? 'border-white/10 bg-white/5' : 'border-neutral-100 bg-slate-50'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-2xl ${dm ? 'bg-white/10' : 'bg-indigo-50'}`}>{c.icon}</div>
+                <div className="w-full">
+                  <p className={`text-[11px] font-bold truncate ${dm ? 'text-white' : 'text-slate-900'}`}>{c.name}</p>
+                  <p className={`text-[9px] mt-0.5 ${dm ? 'text-slate-500' : 'text-slate-400'}`}>{c.memberIds.length} members · {c.category}</p>
+                </div>
+                <button onClick={() => onNavigate?.('communities')} className="w-full py-1 rounded-lg bg-emerald-500 text-white text-[10px] font-bold hover:bg-emerald-600 transition-all cursor-pointer">
+                  Join
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className={`px-4 pb-3 border-t pt-2 ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+            <button onClick={() => onNavigate?.('communities')} className={`text-[11px] font-semibold ${dm ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'} transition-all cursor-pointer`}>
+              Browse all clubs & communities →
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (typeIndex === 2) {
+      return (
+        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
+          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+            <div>
+              <p className={`text-[10px] font-mono uppercase tracking-wider ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Opportunities</p>
+              <h3 className={`text-xs font-bold mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Events & Projects 🚀</h3>
+            </div>
+            <button onClick={dismiss} className={`text-[10px] px-2 py-1 rounded-lg ${dm ? 'text-slate-500 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'} transition-all cursor-pointer`}>✕</button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 px-4 pb-4">
+            <button onClick={() => onNavigate?.('events')} className="rounded-xl p-3 bg-gradient-to-br from-rose-500 to-pink-600 text-white text-left hover:opacity-90 transition-all cursor-pointer group">
+              <div className="text-xl mb-1">📅</div>
+              <p className="text-[11px] font-bold">Campus Events</p>
+              <p className="text-[9px] opacity-80 mt-0.5">Hackathons, workshops & more</p>
+              <div className="text-[10px] mt-2 font-semibold opacity-90 group-hover:translate-x-1 transition-transform">Explore →</div>
+            </button>
+            <button onClick={() => onNavigate?.('projects')} className="rounded-xl p-3 bg-gradient-to-br from-amber-500 to-orange-500 text-white text-left hover:opacity-90 transition-all cursor-pointer group">
+              <div className="text-xl mb-1">🛠️</div>
+              <p className="text-[11px] font-bold">Open Projects</p>
+              <p className="text-[9px] opacity-80 mt-0.5">Find your next collaboration</p>
+              <div className="text-[10px] mt-2 font-semibold opacity-90 group-hover:translate-x-1 transition-transform">Join →</div>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (typeIndex === 3) {
+      return (
+        <div key={key} className={`rounded-2xl border overflow-hidden ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'} shadow-sm`}>
+          <div className="relative bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-5">
+            <button onClick={dismiss} className="absolute top-3 right-3 text-white/60 hover:text-white text-[10px] px-2 py-1 rounded-lg hover:bg-white/10 transition-all cursor-pointer">✕</button>
+            <p className="text-[10px] font-mono text-white/60 uppercase tracking-widest mb-1">Discover</p>
+            <h3 className="text-sm font-extrabold text-white">Explore Your Campus 🎓</h3>
+            <p className="text-[11px] text-white/70 mt-1">Find students, colleges, groups, and opportunities across The Network</p>
+          </div>
+          <div className="grid grid-cols-3 divide-x p-0 overflow-hidden" style={{borderTop: dm ? '1px solid rgba(255,255,255,0.05)' : '1px solid #f0f0f0'}}>
+            {[
+              { icon: '🔍', label: 'Discover', view: 'explore' },
+              { icon: '💬', label: 'Groups', view: 'messages' },
+              { icon: '🏫', label: 'Colleges', view: 'colleges' },
+            ].map(item => (
+              <button key={item.view} onClick={() => onNavigate?.(item.view)} className={`flex flex-col items-center gap-1.5 py-3 text-center hover:bg-white/5 transition-all cursor-pointer divide-x ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+                <span className="text-lg">{item.icon}</span>
+                <span className={`text-[10px] font-bold ${dm ? 'text-slate-300' : 'text-slate-600'}`}>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <>
@@ -504,7 +647,7 @@ export default function FeedSection({
               </p>
             </div>
           ) : (
-            filteredPosts.map((post) => {
+            filteredPosts.flatMap((post, postIndex) => {
               const author = allUsers.find(u => u.id === post.authorId);
               const isLiked = post.likes.includes(currentUser.id);
               const dateStr = new Date(post.createdAt).toLocaleDateString(undefined, {
@@ -514,9 +657,9 @@ export default function FeedSection({
                 minute: '2-digit'
               });
 
-              if (!author || author.isSuspended) return null;
+              if (!author || author.isSuspended) return [];
 
-              return (
+              const postCard = (
                 <div
                   id={`feed-post-card-${post.id}`}
                   key={post.id}
@@ -702,6 +845,11 @@ export default function FeedSection({
                   </div>
                 </div>
               );
+
+              const shouldInject = (postIndex + 1) % 3 === 0;
+              const suggTypeIndex = (Math.floor((postIndex + 1) / 3) - 1) % 4;
+              const suggCard = shouldInject ? renderSuggestionCard(suggTypeIndex, `sugg-${postIndex}`) : null;
+              return [postCard, ...(suggCard ? [suggCard] : [])];
             })
           )}
         </div>

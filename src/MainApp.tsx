@@ -855,6 +855,7 @@ export default function App() {
               onViewUserProfile={setViewingUserProfileId}
               onReactToStory={handleReactToStory}
               onSendConnectionRequest={(receiverId) => handleSendConnectionRequest(receiverId, 'Friendship', `Hi! I'd love to connect with you.`)}
+              onNavigate={setActiveView}
             />
           )}
 
