@@ -129,6 +129,8 @@ export default function CreateModal({ onClose, currentUser, communities, darkMod
 
   const [reelContent, setReelContent] = useState('');
   const [reelImage, setReelImage] = useState('');
+  const [reelMediaType, setReelMediaType] = useState<'image' | 'video'>('image');
+  const reelVideoRef = useRef<HTMLInputElement>(null);
 
   const [clubName, setClubName] = useState('');
   const [clubDesc, setClubDesc] = useState('');
@@ -625,7 +627,7 @@ export default function CreateModal({ onClose, currentUser, communities, darkMod
           {activeTab === 'reel' && (
             <form id="form-create" onSubmit={handleReel} className="space-y-3">
               <div className={`p-3 rounded-xl border text-[10px] font-mono ${dm ? 'border-pink-500/20 bg-pink-500/5 text-pink-400' : 'border-pink-200 bg-pink-50 text-pink-600'}`}>
-                ✨ Reels are 24-hour stories visible to your campus network
+                🎬 Reels are 24-hour stories visible to your campus network — share photos or short videos!
               </div>
               <div>
                 <label className={labelCls()}>Caption</label>
@@ -634,21 +636,45 @@ export default function CreateModal({ onClose, currentUser, communities, darkMod
                   className={`${inputCls(dm)} resize-none`} />
               </div>
               <div>
-                <label className={labelCls()}>Image / Clip</label>
+                <label className={labelCls()}>Media</label>
+                {/* Toggle image / video */}
+                <div className={`flex rounded-xl overflow-hidden border mb-3 ${dm ? 'border-white/10' : 'border-neutral-200'}`}>
+                  {[{ t: 'image' as const, label: '🖼️ Photo' }, { t: 'video' as const, label: '🎬 Video' }].map(opt => (
+                    <button
+                      key={opt.t}
+                      type="button"
+                      onClick={() => { setReelMediaType(opt.t); setReelImage(''); }}
+                      className={`flex-1 py-2 text-[11px] font-bold transition-all cursor-pointer border-0 ${reelMediaType === opt.t ? 'bg-pink-500 text-white' : dm ? 'bg-white/5 text-slate-400' : 'bg-neutral-50 text-slate-500'}`}
+                    >{opt.label}</button>
+                  ))}
+                </div>
+
                 {reelImage ? (
-                  <div className="relative rounded-xl overflow-hidden h-40">
-                    <img src={reelImage} className="w-full h-full object-cover" />
+                  <div className="relative rounded-xl overflow-hidden h-48">
+                    {reelMediaType === 'video' ? (
+                      <video src={reelImage} className="w-full h-full object-cover" controls muted playsInline />
+                    ) : (
+                      <img src={reelImage} className="w-full h-full object-cover" />
+                    )}
                     <button type="button" onClick={() => setReelImage('')} className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white cursor-pointer border-0"><X size={12} /></button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => reelFileRef.current?.click()}
-                    className={`w-full py-8 rounded-xl border-2 border-dashed text-xs flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${dm ? 'border-white/10 text-slate-500 hover:border-white/20' : 'border-neutral-200 text-slate-400 hover:border-neutral-300'}`}>
-                    <Video size={24} className="text-pink-400" />
-                    <span>Upload image for your reel</span>
-                    <span className="text-[10px] opacity-60">PNG, JPG supported</span>
+                  <button type="button" onClick={() => (reelMediaType === 'video' ? reelVideoRef : reelFileRef).current?.click()}
+                    className={`w-full py-10 rounded-xl border-2 border-dashed text-xs flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${dm ? 'border-white/10 text-slate-500 hover:border-pink-500/30 hover:bg-pink-500/5' : 'border-neutral-200 text-slate-400 hover:border-pink-300 hover:bg-pink-50/50'}`}>
+                    <Video size={28} className="text-pink-400" />
+                    <span className="font-semibold">{reelMediaType === 'video' ? 'Upload a video clip' : 'Upload a photo'}</span>
+                    <span className="text-[10px] opacity-60">{reelMediaType === 'video' ? 'MP4, WebM, MOV · max ~50MB' : 'PNG, JPG, WebP'}</span>
                   </button>
                 )}
-                <input ref={reelFileRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, setReelImage)} />
+                <input ref={reelFileRef} type="file" accept="image/*" className="hidden" onChange={e => { setReelMediaType('image'); handleImageUpload(e, setReelImage); }} />
+                <input ref={reelVideoRef} type="file" accept="video/mp4,video/webm,video/quicktime,video/*" className="hidden" onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 52_428_800) { alert('Video is too large. Please keep it under 50MB.'); return; }
+                  const reader = new FileReader();
+                  reader.onloadend = () => { setReelMediaType('video'); setReelImage(reader.result as string); };
+                  reader.readAsDataURL(file);
+                }} />
               </div>
             </form>
           )}
