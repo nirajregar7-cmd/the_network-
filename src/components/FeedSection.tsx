@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Post, Comment, Community, Story, Connection, CampusEvent, Project, GroupChat } from '../types';
+import { getCollegeImage } from '../data/collegeImages';
 import {
   Heart,
   MessageCircle,
@@ -536,11 +537,19 @@ export default function FeedSection({
     if (typeIndex === 5) {
       return (
         <div key={key} className={`rounded-2xl border overflow-hidden shadow-sm ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}>
-          <div className="relative bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-700 p-5">
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/2" />
-            <p className="text-[9px] font-mono text-white/60 uppercase tracking-widest mb-1">Discover The Network</p>
-            <h3 className="text-sm font-extrabold text-white">Explore Your Campus 🎓</h3>
-            <p className="text-[11px] text-white/70 mt-1 max-w-[260px]">Find students, join communities, discover hackathons, and build your college network</p>
+          <div className="relative h-28 overflow-hidden">
+            <img
+              src={getCollegeImage(currentUser.college || '')}
+              alt="Campus"
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+            <div className="absolute bottom-0 left-0 p-4">
+              <p className="text-[9px] font-mono text-white/60 uppercase tracking-widest mb-0.5">Discover The Network</p>
+              <h3 className="text-sm font-extrabold text-white">Explore {currentUser.college || 'Your Campus'} 🎓</h3>
+              <p className="text-[11px] text-white/70 mt-0.5">Find students, join communities, discover hackathons</p>
+            </div>
           </div>
           <div className={`grid grid-cols-3 ${dm ? 'divide-x divide-white/5 border-t border-white/5' : 'divide-x divide-neutral-100 border-t border-neutral-100'}`}>
             {[

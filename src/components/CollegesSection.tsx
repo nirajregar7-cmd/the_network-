@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Community, UserProfile, Connection, Post, CollegeAnnouncement } from '../types';
 import { api } from '../api';
+import { getCollegeImage } from '../data/collegeImages';
 import {
   GraduationCap, Users, Plus, X, Search, ChevronDown, ChevronUp,
   Star, Globe, Pencil, Trash2, UserPlus, LogOut, CheckCircle2, Building2,
@@ -290,6 +291,7 @@ export default function CollegesSection({
           const isExpanded = expandedCollege === college;
           const myClubCount = clubs.filter(c => c.memberIds.includes(currentUser.id)).length;
           const grad = collegeGradient(college);
+          const campusImg = getCollegeImage(college);
           const collegeAnn = announcements[college] || [];
           const isStudentsExpanded = expandedStudents.has(college);
           const visibleStudents = isStudentsExpanded ? students : students.slice(0, 8);
@@ -306,7 +308,17 @@ export default function CollegesSection({
                 onClick={() => handleExpandCollege(college)}
                 className="w-full text-left cursor-pointer"
               >
-                <div className={`h-14 bg-gradient-to-r ${grad} relative`}>
+                <div className="h-20 relative overflow-hidden">
+                  <img
+                    src={campusImg}
+                    alt={college}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      (e.currentTarget.parentElement as HTMLElement).classList.add(`bg-gradient-to-r`, grad);
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/30" />
                   {isMyCollege && (
                     <span className="absolute top-2 right-3 px-2 py-0.5 rounded-full bg-white/20 text-white text-[9px] font-bold backdrop-blur-sm flex items-center gap-1">
                       <Star size={9} />MY COLLEGE
