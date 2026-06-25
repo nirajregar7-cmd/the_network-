@@ -219,6 +219,20 @@ export default function FeedSection({
 
   const eligibleUsers = allUsers.filter(u => u.id !== currentUser.id && !u.isSuspended && !connectedUserIds.has(u.id));
 
+  // Smart match for sidebar "People You Should Meet"
+  const scoredMatches = eligibleUsers
+    .map(u => {
+      let score = 0;
+      score += u.interests.filter(i => currentUser.interests.includes(i)).length * 2;
+      score += u.lookingFor.filter(l => currentUser.lookingFor.includes(l)).length * 2;
+      score += u.skills.filter(s => !currentUser.skills.includes(s) && currentUser.lookingFor.some(l => s.toLowerCase().includes(l.toLowerCase().substring(0, 4)))).length;
+      if (u.college === currentUser.college) score += 1;
+      return { user: u, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map(m => m.user);
+
   // TYPE 6 — Study Partners: same college + study interests + lookingFor Study Partner
   const studyPartners = eligibleUsers
     .map(u => {
@@ -321,7 +335,7 @@ export default function FeedSection({
                 <div key={u.id} className={`shrink-0 w-40 rounded-2xl border overflow-hidden flex flex-col ${dm ? 'border-white/8 bg-white/4' : 'border-neutral-100 bg-white'}`} style={{boxShadow: dm ? 'none' : '0 1px 8px rgba(0,0,0,0.06)'}}>
                   <div className="relative h-24 bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center bg-white/20">
-                      <Avatar avatar={u.avatar} size={64} />
+                      <Avatar avatar={u.avatar} />
                     </div>
                     {u.isVerified && <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold shadow">✓</span>}
                     <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-blue-500 text-white text-[8px] font-bold">📚 Study Partner</span>
@@ -380,7 +394,7 @@ export default function FeedSection({
                 <div key={u.id} className={`shrink-0 w-40 rounded-2xl border overflow-hidden flex flex-col ${dm ? 'border-white/8 bg-white/4' : 'border-neutral-100 bg-white'}`} style={{boxShadow: dm ? 'none' : '0 1px 8px rgba(0,0,0,0.06)'}}>
                   <div className="relative h-24 bg-gradient-to-br from-pink-400 to-rose-600 flex items-center justify-center">
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center bg-white/20">
-                      <Avatar avatar={u.avatar} size={64} />
+                      <Avatar avatar={u.avatar} />
                     </div>
                     {u.isVerified && <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold shadow">✓</span>}
                     <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-pink-500 text-white text-[8px] font-bold">👋 Friendship</span>
@@ -439,7 +453,7 @@ export default function FeedSection({
                 <div key={u.id} className={`shrink-0 w-40 rounded-2xl border overflow-hidden flex flex-col ${dm ? 'border-white/8 bg-white/4' : 'border-neutral-100 bg-white'}`} style={{boxShadow: dm ? 'none' : '0 1px 8px rgba(0,0,0,0.06)'}}>
                   <div className="relative h-24 bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center">
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/40 shadow-lg flex items-center justify-center bg-white/20">
-                      <Avatar avatar={u.avatar} size={64} />
+                      <Avatar avatar={u.avatar} />
                     </div>
                     {u.isVerified && <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold shadow">✓</span>}
                     <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-violet-600 text-white text-[8px] font-bold">🚀 Co-Founder</span>
@@ -684,44 +698,77 @@ export default function FeedSection({
       );
     }
 
-    // TYPE 5 — Explore Campus Banner
+    // TYPE 5 — Campus Colleges Card (screenshot style)
     if (typeIndex === 5) {
+      const campusColleges = Array.from(
+        new Map(
+          allUsers
+            .filter(u => u.college)
+            .map(u => [u.college, u])
+        ).values()
+      ).slice(0, 8);
+
       return (
         <div key={key} className={`rounded-2xl border overflow-hidden shadow-sm ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}>
-          <div className="relative h-28 overflow-hidden">
-            <img
-              src={getCollegeImage(currentUser.college || '')}
-              alt="Campus"
-              className="w-full h-full object-cover"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
-            <div className="absolute bottom-0 left-0 p-4">
-              <p className="text-[9px] font-mono text-white/60 uppercase tracking-widest mb-0.5">Discover The Network</p>
-              <h3 className="text-sm font-extrabold text-white">Explore {currentUser.college || 'Your Campus'} 🎓</h3>
-              <p className="text-[11px] text-white/70 mt-0.5">Find students, join communities, discover hackathons</p>
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-indigo-500/10 flex items-center justify-center"><span className="text-sm">🏛️</span></div>
+              <div>
+                <p className={`text-[9px] font-mono uppercase tracking-widest ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Campus Network</p>
+                <h3 className={`text-sm font-extrabold leading-none mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Colleges</h3>
+              </div>
             </div>
+            <button onClick={() => onNavigate?.('colleges')} className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer">See All →</button>
           </div>
-          <div className={`grid grid-cols-3 ${dm ? 'divide-x divide-white/5 border-t border-white/5' : 'divide-x divide-neutral-100 border-t border-neutral-100'}`}>
-            {[
-              { icon: '🔍', label: 'Discover', sub: 'Find people', view: 'explore' },
-              { icon: '🏛️', label: 'Communities', sub: 'Join clubs', view: 'communities' },
-              { icon: '🏫', label: 'Colleges', sub: 'Browse campus', view: 'colleges' },
-            ].map(item => (
-              <button key={item.view} onClick={() => onNavigate?.(item.view)} className={`flex flex-col items-center gap-1 py-3.5 px-2 text-center transition-all cursor-pointer ${dm ? 'hover:bg-white/5' : 'hover:bg-neutral-50'}`}>
-                <span className="text-lg">{item.icon}</span>
-                <span className={`text-[10px] font-bold ${dm ? 'text-slate-300' : 'text-slate-700'}`}>{item.label}</span>
-                <span className={`text-[8px] ${dm ? 'text-slate-600' : 'text-slate-400'}`}>{item.sub}</span>
-              </button>
-            ))}
+
+          <div className="flex gap-3 overflow-x-auto px-4 pb-4 pt-1 no-scrollbar">
+            {campusColleges.map((u, idx) => {
+              const collegeName = u.college!;
+              const imgUrl = getCollegeImage(collegeName);
+              const isMyCollege = collegeName === currentUser.college;
+              const studentsHere = allUsers.filter(x => x.college === collegeName).length;
+              const yearBadge = u.year ? `${u.year}YR` : `${idx + 1}YEB`;
+              return (
+                <div
+                  key={collegeName}
+                  onClick={() => onNavigate?.('colleges')}
+                  className={`shrink-0 w-44 rounded-2xl overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] ${dm ? 'bg-[#1a1a24]' : 'bg-white'} shadow-md border ${isMyCollege ? 'border-indigo-400/40' : dm ? 'border-white/8' : 'border-neutral-200'}`}
+                >
+                  <div className="relative h-32 overflow-hidden">
+                    <img
+                      src={imgUrl}
+                      alt={collegeName}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-amber-400 text-black text-[8px] font-extrabold">⭐ {yearBadge}</span>
+                    <button
+                      onClick={e => e.stopPropagation()}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow"
+                    >
+                      <Heart size={10} className="text-rose-400" />
+                    </button>
+                    {isMyCollege && (
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-indigo-500 text-white text-[8px] font-bold">My College</span>
+                    )}
+                  </div>
+                  <div className={`p-3 ${dm ? 'bg-[#1a1a24]' : 'bg-white'}`}>
+                    <p className={`text-[11px] font-extrabold leading-tight truncate ${dm ? 'text-white' : 'text-slate-900'}`}>{collegeName}</p>
+                    <p className={`text-[9px] mt-0.5 ${dm ? 'text-slate-400' : 'text-slate-500'}`}>India · {new Date().getFullYear()}</p>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <span className="text-amber-400 text-[10px]">★</span>
+                      <span className={`text-[9px] font-semibold ${dm ? 'text-slate-300' : 'text-slate-700'}`}>{studentsHere} student{studentsHere !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className={`px-4 pb-3 pt-2 flex items-center justify-between border-t ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
-            <button onClick={() => setDismissedSuggestions(prev => new Set([...prev, typeIndex]))} className={`text-[10px] ${dm ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'} transition-all cursor-pointer`}>
-              Not interested
-            </button>
-            <button onClick={() => onNavigate?.('explore')} className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer flex items-center gap-1">
-              Explore all <Zap size={9} />
-            </button>
+
+          <div className={`px-4 pb-3 pt-1 flex items-center justify-between border-t ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+            <button onClick={() => setDismissedSuggestions(prev => new Set([...prev, typeIndex]))} className={`text-[10px] ${dm ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'} transition-all cursor-pointer`}>Not interested</button>
+            <button onClick={() => onNavigate?.('colleges')} className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer">Browse all colleges →</button>
           </div>
         </div>
       );

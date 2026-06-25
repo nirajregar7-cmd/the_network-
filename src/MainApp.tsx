@@ -678,7 +678,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
+      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pb-20 md:pb-4 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
         
         <aside className={`w-full md:w-60 shrink-0 space-y-4 ${activeView === 'messages' ? 'md:overflow-y-auto md:max-h-full' : ''}`}>
           <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all overflow-x-auto md:overflow-hidden" style={{ backgroundColor: 'var(--t-card)' }}>
@@ -1487,6 +1487,52 @@ export default function App() {
 
     <InstallPrompt darkMode={darkMode} />
     {currentUser && <NotificationSetup userId={currentUser.id} darkMode={darkMode} />}
+
+    {/* Mobile Bottom Navigation Bar */}
+    <nav className={`md:hidden fixed bottom-0 left-0 right-0 z-50 border-t flex items-center justify-around px-2 py-2 ${darkMode ? 'bg-[#09090C]/95 border-white/10 backdrop-blur-xl' : 'bg-white/95 border-neutral-200 backdrop-blur-xl'}`}
+      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+    >
+      {[
+        { view: 'feed',        icon: <BookOpen size={18} />,      label: 'Home' },
+        { view: 'explore',     icon: <Search size={18} />,         label: 'Explore' },
+        { view: 'messages',    icon: <MessageSquare size={18} />,  label: 'Chats', badge: totalUnreadMessages },
+        { view: 'colleges',    icon: <Building2 size={18} />,      label: 'Campus' },
+        { view: 'profile',     icon: <Settings size={18} />,       label: 'Profile' },
+      ].map(item => (
+        <button
+          key={item.view}
+          onClick={() => setActiveView(item.view)}
+          className={`relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all cursor-pointer ${
+            activeView === item.view
+              ? 'text-indigo-500'
+              : darkMode ? 'text-slate-500' : 'text-slate-400'
+          }`}
+        >
+          {item.badge && item.badge > 0 ? (
+            <span className="relative">
+              {item.icon}
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500 text-white text-[7px] font-bold flex items-center justify-center">{item.badge > 9 ? '9+' : item.badge}</span>
+            </span>
+          ) : item.icon}
+          <span className={`text-[9px] font-semibold leading-none ${activeView === item.view ? 'text-indigo-500' : ''}`}>{item.label}</span>
+          {activeView === item.view && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-500" />}
+        </button>
+      ))}
+
+      {/* Centre Create button */}
+      {!currentUser.isSuspended && (
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex flex-col items-center gap-0.5 px-3 py-1 cursor-pointer"
+          style={{ order: -1, marginLeft: 'auto', marginRight: 'auto' }}
+        >
+          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 -mt-5">
+            <Plus size={20} className="text-white" strokeWidth={2.5} />
+          </span>
+          <span className={`text-[9px] font-semibold ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Create</span>
+        </button>
+      )}
+    </nav>
     </div>
   );
 }
