@@ -734,39 +734,12 @@ export default function App() {
               </button>
 
               <button
-                id="view-communities-tab"
-                onClick={() => setActiveView('communities')}
-                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'communities' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
-              >
-                <Users size={14} />
-                <span>Chapters</span>
-              </button>
-
-              <button
                 id="view-colleges-tab"
                 onClick={() => setActiveView('colleges')}
                 className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'colleges' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
               >
                 <Building2 size={14} />
                 <span>Colleges</span>
-              </button>
-
-              <button
-                id="view-events-tab"
-                onClick={() => setActiveView('events')}
-                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'events' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
-              >
-                <Calendar size={14} />
-                <span>Events</span>
-              </button>
-
-              <button
-                id="view-projects-tab"
-                onClick={() => setActiveView('projects')}
-                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'projects' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
-              >
-                <Rocket size={14} />
-                <span>Projects</span>
               </button>
 
               <button
@@ -810,35 +783,6 @@ export default function App() {
             </nav>
 
             <div className="hidden md:block mt-6 pt-4 border-t border-neutral-150 dark:border-white/10 space-y-3">
-              <div className="px-1">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <Palette size={12} className="text-slate-400" />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Theme</span>
-                </div>
-                <div className="grid grid-cols-6 gap-1.5">
-                  {(Object.entries(THEMES) as [ThemeName, typeof THEMES[ThemeName]][]).map(([key, t]) => (
-                    <button
-                      key={key}
-                      onClick={() => setTheme(key)}
-                      title={t.label}
-                      className="relative w-7 h-7 rounded-full transition-all cursor-pointer border-2 hover:scale-110 active:scale-95"
-                      style={{
-                        backgroundColor: t.swatch,
-                        borderColor: theme === key ? t.ring : 'transparent',
-                        boxShadow: theme === key ? `0 0 0 1px ${t.ring}40` : undefined,
-                      }}
-                    >
-                      {theme === key && (
-                        <span className="absolute inset-0 flex items-center justify-center">
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.ring }} />
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1.5 text-[9px] font-mono text-slate-400 dark:text-slate-600 pl-0.5">{THEMES[theme].label}</p>
-              </div>
-
               <button
                 id="btn-logout"
                 onClick={handleLogout}
