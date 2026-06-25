@@ -22,6 +22,7 @@ import NotificationsDropdown from './components/NotificationsDropdown';
 import Avatar from './components/Avatar';
 import InstallPrompt from './components/InstallPrompt';
 import NotificationSetup from './components/NotificationSetup';
+import MyContentSection from './components/MyContentSection';
 
 import {
   GraduationCap,
@@ -47,6 +48,7 @@ import {
   Calendar,
   Crown,
   ClipboardCheck,
+  LayoutGrid,
 } from 'lucide-react';
 
 type ThemeName = 'light' | 'dark' | 'ocean' | 'forest' | 'sunset' | 'midnight';
@@ -752,6 +754,15 @@ export default function App() {
               </button>
 
               <button
+                id="view-mycontent-tab"
+                onClick={() => setActiveView('mycontent')}
+                className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'mycontent' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
+              >
+                <LayoutGrid size={14} />
+                <span>My Content</span>
+              </button>
+
+              <button
                 id="view-profile-tab"
                 onClick={() => setActiveView('profile')}
                 className={`shrink-0 md:w-full py-2 px-3 rounded-xl flex items-center gap-3 font-semibold transition-all cursor-pointer border ${activeView === 'profile' ? 'bg-indigo-500 text-white border-transparent shadow-sm' : (darkMode ? 'text-slate-400 border-transparent hover:bg-white/5 hover:text-white' : 'text-slate-600 border-transparent hover:bg-neutral-100 hover:text-slate-950')}`}
@@ -895,6 +906,15 @@ export default function App() {
             <AttendanceSection
               currentUser={currentUser}
               darkMode={darkMode}
+            />
+          )}
+
+          {activeView === 'mycontent' && (
+            <MyContentSection
+              currentUser={currentUser}
+              darkMode={darkMode}
+              posts={posts}
+              onDeletePost={handleDeletePost}
             />
           )}
 
