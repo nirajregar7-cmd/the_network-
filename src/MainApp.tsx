@@ -3,6 +3,7 @@ import { UserProfile, Post, Community, Connection, DirectMessage, UserReport, Co
 import { ALL_PREDEFINED_CHAPTERS } from './data/chaptersData';
 import { api } from './api';
 
+import CreateModal from './components/CreateModal';
 import AuthSection from './components/AuthSection';
 import OnboardingSection from './components/OnboardingSection';
 import DashboardSection from './components/DashboardSection';
@@ -111,6 +112,7 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<string>('feed');
   const [showNewPostModal, setShowNewPostModal] = useState<boolean>(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewingUserProfileId, setViewingUserProfileId] = useState<string | null>(null);
   const [preSelectedMsgUserId, setPreSelectedMsgUserId] = useState<string | null>(null);
   const [profileActiveTab, setProfileActiveTab] = useState<'card' | 'shares'>('card');
@@ -653,12 +655,12 @@ export default function App() {
           {!currentUser.isSuspended && (
             <button
               id="header-post-trigger"
-              onClick={() => setShowNewPostModal(true)}
-              className="relative overflow-hidden group py-1.5 px-3 sm:px-4 rounded-full bg-gradient-to-r from-indigo-505 via-indigo-600 to-pink-500 hover:from-pink-500 hover:to-indigo-600 font-extrabold text-[11px] uppercase tracking-wider text-white shadow-sm hover:shadow-indigo-500/15 hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border-0"
-              title="Share an update, dispatch, or vibe"
+              onClick={() => setShowCreateModal(true)}
+              className="relative overflow-hidden group py-1.5 px-3 sm:px-4 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-pink-500 hover:from-pink-500 hover:to-indigo-600 font-extrabold text-[11px] uppercase tracking-wider text-white shadow-sm hover:shadow-indigo-500/15 hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border-0"
+              title="Create post, event, project, community, group, or reel"
             >
               <Plus size={13} strokeWidth={2.5} />
-              <span className="hidden sm:inline">Share</span>
+              <span className="hidden sm:inline">Create</span>
             </button>
           )}
           
@@ -1032,6 +1034,21 @@ export default function App() {
       </div>
 
       {/* New Post Modal */}
+      {showCreateModal && (
+        <CreateModal
+          onClose={() => setShowCreateModal(false)}
+          currentUser={currentUser}
+          communities={communities}
+          darkMode={darkMode}
+          onPostCreated={(post) => setPosts(prev => [post, ...prev])}
+          onEventCreated={(event) => { /* events live in EventsSection local state; navigate there */ setActiveView('events'); }}
+          onProjectCreated={(proj) => { setActiveView('projects'); }}
+          onCommunityCreated={(comm) => setCommunities(prev => [comm, ...prev])}
+          onGroupCreated={(group) => { setActiveView('messages'); }}
+          onStoryCreated={(story) => setStories(prev => [story, ...prev])}
+        />
+      )}
+
       {showNewPostModal && (
         <div className="fixed inset-0 bg-neutral-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all animate-fade-in font-sans">
           <div className={`relative w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl border border-neutral-200/90 dark:border-white/10 flex flex-col md:flex-row max-h-[90vh] md:h-[620px] transition-all duration-300 ${darkMode ? 'bg-[#0E0E12] text-[#F9F7F2]' : 'bg-white text-slate-900'}`}>
