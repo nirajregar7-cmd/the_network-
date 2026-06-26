@@ -123,7 +123,7 @@ export default function App() {
   const [profileInterestsExpanded, setProfileInterestsExpanded] = useState<boolean>(false);
   const [profileLookingForExpanded, setProfileLookingForExpanded] = useState<boolean>(false);
 
-  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number>(0);
   const SWIPE_VIEWS = ['feed', 'dashboard', 'explore', 'messages', 'colleges', 'attendance', 'mycontent', 'profile'];
 
   const [modalPostContent, setModalPostContent] = useState('');
@@ -576,17 +576,17 @@ export default function App() {
     }
   };
 
-  const handleMobileScroll = useCallback(() => {
-    if (!mobileScrollRef.current) return;
-    const idx = Math.round(mobileScrollRef.current.scrollLeft / mobileScrollRef.current.offsetWidth);
-    const view = SWIPE_VIEWS[idx];
-    if (view && view !== activeView) setActiveView(view);
-  }, [activeView]);
+  const onSwipeStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
 
-  useEffect(() => {
+  const onSwipeEnd = useCallback((e: React.TouchEvent) => {
+    const delta = touchStartX.current - e.changedTouches[0].clientX;
     const idx = SWIPE_VIEWS.indexOf(activeView);
-    if (idx >= 0 && mobileScrollRef.current) {
-      mobileScrollRef.current.scrollTo({ left: idx * mobileScrollRef.current.offsetWidth, behavior: 'smooth' });
+    if (delta > 60 && idx < SWIPE_VIEWS.length - 1) {
+      setActiveView(SWIPE_VIEWS[idx + 1]);
+    } else if (delta < -60 && idx > 0) {
+      setActiveView(SWIPE_VIEWS[idx - 1]);
     }
   }, [activeView]);
 
