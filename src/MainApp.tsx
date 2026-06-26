@@ -608,7 +608,7 @@ export default function App() {
   return (
     <div className={`${activeView === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} w-full flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
-      <header className="border-b border-neutral-200 dark:border-white/10 px-6 lg:px-8 py-3.5 flex items-center justify-between transition-all sticky top-0 z-30 backdrop-blur-md" style={{ backgroundColor: 'var(--t-header)' }}>
+      <header className="border-b border-neutral-200 dark:border-white/10 px-4 lg:px-8 py-3.5 flex items-center justify-between transition-all fixed top-0 left-0 right-0 z-30 backdrop-blur-md" style={{ backgroundColor: 'var(--t-header)' }}>
         <div className="flex items-center space-x-4 lg:space-x-8">
           <h1 className="text-xl lg:text-2xl font-serif italic font-black tracking-tight uppercase select-none bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
             The Network
@@ -658,11 +658,11 @@ export default function App() {
             <button
               id="header-post-trigger"
               onClick={() => setShowCreateModal(true)}
-              className="relative overflow-hidden group py-1.5 px-3 sm:px-4 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-pink-500 hover:from-pink-500 hover:to-indigo-600 font-extrabold text-[11px] uppercase tracking-wider text-white shadow-sm hover:shadow-indigo-500/15 hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border-0"
+              className="hidden md:flex relative overflow-hidden group py-1.5 px-4 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-pink-500 hover:from-pink-500 hover:to-indigo-600 font-extrabold text-[11px] uppercase tracking-wider text-white shadow-sm hover:shadow-indigo-500/15 hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer items-center gap-1.5 shrink-0 border-0"
               title="Create post, event, project, community, group, or reel"
             >
               <Plus size={13} strokeWidth={2.5} />
-              <span className="hidden sm:inline">Create</span>
+              <span>Create</span>
             </button>
           )}
           
@@ -678,7 +678,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pb-20 md:pb-4 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
+      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pt-[60px] pb-20 md:pb-4 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
         
         <aside className={`w-full md:w-60 shrink-0 space-y-4 ${activeView === 'messages' ? 'md:overflow-y-auto md:max-h-full' : ''}`}>
           <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all overflow-x-auto md:overflow-hidden" style={{ backgroundColor: 'var(--t-card)' }}>
