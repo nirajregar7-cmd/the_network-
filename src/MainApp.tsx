@@ -942,6 +942,7 @@ export default function App() {
             className={`snap-start w-screen shrink-0 ${
               view === 'messages' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
             }`}
+            style={{ touchAction: 'pan-y' }}
           >
             <div className={view === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'p-3 pb-4 space-y-4'}>
               {renderSection(view)}
