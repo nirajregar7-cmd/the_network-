@@ -940,20 +940,23 @@ export default function App() {
 
       {/* ── MOBILE: single active section ── */}
       <div
-        className={`md:hidden flex-1 min-h-0 overflow-hidden ${activeView === 'messages' ? 'flex flex-col' : ''}`}
+        className={`md:hidden flex-1 min-h-0 ${activeView === 'messages' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
         onTouchStart={onSwipeStart}
         onTouchEnd={onSwipeEnd}
       >
-        <div
-          key={slideKey}
-          className={activeView === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'h-full overflow-y-auto p-3 pb-4 space-y-4'}
-          style={{
-            animation: slideDir
-              ? `${slideDir === 'left' ? 'slideInFromRight' : 'slideInFromLeft'} 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both`
-              : undefined,
-          }}
-        >
-          {renderSection(activeView)}
+        {/* overflow-x:clip clips the slide animation horizontally WITHOUT blocking touch/scroll */}
+        <div style={{ overflowX: 'clip', minHeight: '100%', display: activeView === 'messages' ? 'flex' : 'block', flexDirection: 'column', flex: activeView === 'messages' ? '1' : undefined }}>
+          <div
+            key={slideKey}
+            className={activeView === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'p-3 pb-4 space-y-4'}
+            style={{
+              animation: slideDir
+                ? `${slideDir === 'left' ? 'slideInFromRight' : 'slideInFromLeft'} 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both`
+                : undefined,
+            }}
+          >
+            {renderSection(activeView)}
+          </div>
         </div>
         {/* Admin / college_admin overlay */}
         {(activeView === 'admin' || activeView === 'college_admin') && (
