@@ -4,6 +4,7 @@ import { ALL_PREDEFINED_CHAPTERS } from './data/chaptersData';
 import { api } from './api';
 
 import CreateModal from './components/CreateModal';
+import ReelsViewer from './components/ReelsViewer';
 import AuthSection from './components/AuthSection';
 import OnboardingSection from './components/OnboardingSection';
 import DashboardSection from './components/DashboardSection';
@@ -115,6 +116,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<string>('feed');
   const [showNewPostModal, setShowNewPostModal] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeReelData, setActiveReelData] = useState<{ reels: Story[]; index: number } | null>(null);
   const [viewingUserProfileId, setViewingUserProfileId] = useState<string | null>(null);
   const [preSelectedMsgUserId, setPreSelectedMsgUserId] = useState<string | null>(null);
   const [profileActiveTab, setProfileActiveTab] = useState<'card' | 'shares'>('card');
@@ -867,6 +869,7 @@ export default function App() {
               onReactToStory={handleReactToStory}
               onSendConnectionRequest={(receiverId) => handleSendConnectionRequest(receiverId, 'Friendship', `Hi! I'd love to connect with you.`)}
               onNavigate={setActiveView}
+              onOpenReel={(reels, index) => setActiveReelData({ reels, index })}
             />
           )}
 
@@ -997,6 +1000,20 @@ export default function App() {
         </main>
 
       </div>
+
+      {/* Root-level Reels Viewer — renders above everything including fixed header & bottom nav */}
+      {activeReelData && (
+        <ReelsViewer
+          reels={activeReelData.reels}
+          startIndex={activeReelData.index}
+          allUsers={allUsers}
+          currentUser={currentUser}
+          darkMode={darkMode}
+          onClose={() => setActiveReelData(null)}
+          onViewUserProfile={(id) => { setActiveReelData(null); setViewingUserProfileId(id); }}
+          onReact={handleReactToStory}
+        />
+      )}
 
       {/* New Post Modal */}
       {showCreateModal && (

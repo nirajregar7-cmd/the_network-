@@ -28,7 +28,6 @@ import {
   Zap,
 } from 'lucide-react';
 import StoriesBubbleTray from './StoriesBubbleTray';
-import ReelsViewer from './ReelsViewer';
 import Avatar from './Avatar';
 import { api } from '../api';
 
@@ -64,6 +63,7 @@ interface FeedSectionProps {
   onReactToStory?: (storyId: string, emoji: string) => void;
   onSendConnectionRequest?: (receiverId: string) => void;
   onNavigate?: (view: string) => void;
+  onOpenReel?: (reels: Story[], index: number) => void;
 }
 
 const POST_PRESETS = [
@@ -94,6 +94,7 @@ export default function FeedSection({
   onReactToStory,
   onSendConnectionRequest,
   onNavigate,
+  onOpenReel,
 }: FeedSectionProps) {
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedTag, setSelectedTag] = useState('Startup Pitch 🚀');
@@ -299,7 +300,6 @@ export default function FeedSection({
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<number>>(new Set());
   const [joinedProjects, setJoinedProjects] = useState<Set<string>>(new Set());
   const [joinedGroups, setJoinedGroups] = useState<Set<string>>(new Set());
-  const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
 
   const SuggCard = ({ children, typeIndex, accentColor = 'text-indigo-400' }: { children: React.ReactNode; typeIndex: number; accentColor?: string }) => {
     const dismiss = () => setDismissedSuggestions(prev => new Set([...prev, typeIndex]));
@@ -802,74 +802,100 @@ export default function FeedSection({
           onReactToStory={onReactToStory}
         />
 
-        {/* ── REELS TRAY ─────────────────────────────────────────── */}
-        {(() => {
-          const videoReels = stories.filter(s => isVideoReel(s.image));
+        {/* ── REEL POST CARDS ──────────────────────────────────── */}
+        {stories.filter(s => s.image).map((reel, idx) => {
           const allReels = stories.filter(s => s.image);
-          if (allReels.length === 0) return null;
+          const author = allUsers.find(u => u.id === reel.authorId);
+          const isVid = isVideoReel(reel.image);
+          const timeAgo = (() => {
+            const diff = Date.now() - new Date(reel.createdAt).getTime();
+            const h = Math.floor(diff / 3_600_000);
+            const m = Math.floor(diff / 60_000);
+            if (h > 23) return new Date(reel.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            if (h > 0) return `${h}h ago`;
+            if (m > 0) return `${m}m ago`;
+            return 'Just now';
+          })();
           return (
-            <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'border-white/8 bg-zinc-950' : 'border-neutral-200/80 bg-white'} shadow-sm`}>
-              {/* Header */}
-              <div className={`flex items-center justify-between px-4 py-3 border-b ${darkMode ? 'border-white/6' : 'border-neutral-100'}`}>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" fill="white" className="w-3.5 h-3.5"><path d="M4 6.5C4 5.12 5.12 4 6.5 4h11C18.88 4 20 5.12 20 6.5v11c0 1.38-1.12 2.5-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11zm9.5 5.5-5-3v6l5-3z"/></svg>
+            <div
+              key={`reel-${reel.id}`}
+              className={`rounded-2xl border overflow-hidden shadow-sm transition-all ${darkMode ? 'bg-zinc-950 border-white/8' : 'bg-white border-neutral-200/80'}`}
+            >
+              {/* Author row */}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => onViewUserProfile?.(author?.id || '')}
+                  className="p-[2px] rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 cursor-pointer border-0 shrink-0"
+                >
+                  <div className="w-9 h-9 rounded-full overflow-hidden">
+                    <Avatar avatar={author?.avatar} />
                   </div>
-                  <div>
-                    <p className={`text-[11px] font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>Campus Reels</p>
-                    <p className={`text-[9px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{allReels.length} reel{allReels.length !== 1 ? 's' : ''} · {videoReels.length} video{videoReels.length !== 1 ? 's' : ''}</p>
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className={`font-bold text-sm truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>{author?.fullName}</p>
+                    <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-pink-500/10 text-pink-500">REEL</span>
+                    {isVid && <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-violet-500/10 text-violet-500 flex items-center gap-0.5"><svg viewBox="0 0 24 24" fill="currentColor" className="w-2 h-2"><path d="M8 5v14l11-7L8 5z"/></svg>VIDEO</span>}
+                  </div>
+                  <p className={`text-[11px] truncate ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{author?.college}</p>
+                </div>
+                <span className={`text-[10px] shrink-0 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{timeAgo}</span>
+              </div>
+
+              {/* Media — click to open full-screen viewer */}
+              <div
+                className="relative cursor-pointer bg-black group"
+                onClick={() => onOpenReel?.(allReels, idx)}
+              >
+                {isVid ? (
+                  <video
+                    src={reel.image!}
+                    className="w-full max-h-[500px] object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                ) : (
+                  <img src={reel.image!} alt="" className="w-full max-h-[500px] object-cover" />
+                )}
+                {/* Play overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/35 transition-all">
+                  <div className="w-16 h-16 rounded-full bg-black/40 border-2 border-white/70 flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform">
+                    <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7 ml-1"><path d="M8 5v14l11-7L8 5z"/></svg>
                   </div>
                 </div>
-                <span className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'text-pink-400' : 'text-pink-500'}`}>NEW</span>
               </div>
-              {/* Horizontal scroll tray */}
-              <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 py-3">
-                {allReels.map((reel, idx) => {
-                  const author = allUsers.find(u => u.id === reel.authorId);
-                  const isVid = isVideoReel(reel.image);
-                  return (
-                    <button
-                      key={reel.id}
-                      type="button"
-                      onClick={() => setActiveReelIndex(idx)}
-                      className="shrink-0 relative w-24 h-36 rounded-xl overflow-hidden cursor-pointer border-0 p-0 group"
-                    >
-                      {/* Media thumbnail */}
-                      {isVid ? (
-                        <video src={reel.image!} className="w-full h-full object-cover" muted playsInline />
-                      ) : reel.image ? (
-                        <img src={reel.image} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-pink-600 to-violet-700 flex items-center justify-center p-2">
-                          <p className="text-white text-[9px] text-center line-clamp-4">{reel.content}</p>
-                        </div>
-                      )}
-                      {/* Dark overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20 group-hover:from-black/80 transition-all" />
-                      {/* Video badge */}
-                      {isVid && (
-                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-pink-500/90 flex items-center justify-center">
-                          <svg viewBox="0 0 24 24" fill="white" className="w-2.5 h-2.5"><path d="M8 5v14l11-7L8 5z"/></svg>
-                        </div>
-                      )}
-                      {/* Author avatar */}
-                      <div className="absolute top-2 left-2 w-7 h-7 rounded-full overflow-hidden border-2 border-pink-500">
-                        <Avatar avatar={author?.avatar} />
-                      </div>
-                      {/* Bottom text */}
-                      <div className="absolute bottom-0 left-0 right-0 px-2 pb-2">
-                        <p className="text-white text-[9px] font-bold truncate">{author?.fullName?.split(' ')[0]}</p>
-                        {reel.content && (
-                          <p className="text-white/60 text-[8px] truncate">{reel.content}</p>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+
+              {/* Caption */}
+              {reel.content && (
+                <div className={`px-4 pt-3 pb-1 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {reel.content}
+                </div>
+              )}
+
+              {/* Action row */}
+              <div className={`flex items-center gap-1 px-3 py-2.5 border-t mt-2 ${darkMode ? 'border-white/6' : 'border-neutral-100'}`}>
+                <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border-0 ${darkMode ? 'text-slate-400 hover:bg-white/5 hover:text-rose-400' : 'text-slate-500 hover:bg-rose-50 hover:text-rose-500'}`}>
+                  <Heart size={15} /> Like
+                </button>
+                <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border-0 ${darkMode ? 'text-slate-400 hover:bg-white/5 hover:text-indigo-400' : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-500'}`}>
+                  <MessageCircle size={15} /> Comment
+                </button>
+                <button
+                  onClick={() => onOpenReel?.(allReels, idx)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border-0 ml-auto ${darkMode ? 'bg-pink-500/10 text-pink-400 hover:bg-pink-500/20' : 'bg-pink-50 text-pink-500 hover:bg-pink-100'}`}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M8 5v14l11-7L8 5z"/></svg>
+                  Watch Reel
+                </button>
+                <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border-0 ${darkMode ? 'text-slate-400 hover:bg-white/5' : 'text-slate-500 hover:bg-slate-50'}`}>
+                  <Share2 size={14} />
+                </button>
               </div>
             </div>
           );
-        })()}
+        })}
 
         {/* Compact Mobile Events Slider — horizontal, scrollbar hidden */}
         {campusEvents.length > 0 && (
@@ -1476,21 +1502,6 @@ export default function FeedSection({
 
     {eventDetailPopup && <EventDetailModal ev={eventDetailPopup} darkMode={darkMode} currentUser={currentUser} onClose={() => setEventDetailPopup(null)} onRegister={handleEventRegister} />}
 
-    {activeReelIndex !== null && (() => {
-      const allReels = stories.filter(s => s.image);
-      return (
-        <ReelsViewer
-          reels={allReels}
-          startIndex={activeReelIndex}
-          allUsers={allUsers}
-          currentUser={currentUser}
-          darkMode={darkMode}
-          onClose={() => setActiveReelIndex(null)}
-          onViewUserProfile={onViewUserProfile}
-          onReact={onReactToStory}
-        />
-      );
-    })()}
     </>
   );
 }
