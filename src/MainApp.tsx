@@ -124,6 +124,7 @@ export default function App() {
   const [profileLookingForExpanded, setProfileLookingForExpanded] = useState<boolean>(false);
 
   const touchStartX = useRef<number>(0);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
   const SWIPE_VIEWS = ['feed', 'dashboard', 'explore', 'messages', 'colleges', 'attendance', 'mycontent', 'profile'];
 
   const [modalPostContent, setModalPostContent] = useState('');
@@ -588,6 +589,14 @@ export default function App() {
     } else if (delta < -60 && idx > 0) {
       setActiveView(SWIPE_VIEWS[idx - 1]);
     }
+  }, [activeView]);
+
+  const handleMobileScroll = useCallback(() => {
+    const el = mobileScrollRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    const view = SWIPE_VIEWS[idx];
+    if (view && view !== activeView) setActiveView(view);
   }, [activeView]);
 
   if (isLoading || !sessionRestored) {
