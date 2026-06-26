@@ -917,7 +917,9 @@ export default function App() {
               currentUser={currentUser}
               darkMode={darkMode}
               posts={posts}
+              allUsers={allUsers}
               onDeletePost={handleDeletePost}
+              onNavigate={setActiveView}
             />
           )}
 

@@ -1232,6 +1232,36 @@ app.put('/api/group-chats/:id/invite', async (req, res) => {
   }
 });
 
+app.put('/api/group-chats/:id/add-member', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(groupChats).where(eq(groupChats.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Group not found' });
+    const g = found[0];
+    const members = (g.memberIds as string[]) || [];
+    if (members.includes(userId)) return res.json({ ...g, createdAt: g.createdAt.toISOString() });
+    const updated = await db.update(groupChats).set({
+      memberIds: [...members, userId],
+      pendingIds: ((g.pendingIds as string[]) || []).filter((id: string) => id !== userId),
+    }).where(eq(groupChats.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/group-chats/:id/remove-member', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const found = await db.select().from(groupChats).where(eq(groupChats.id, req.params.id));
+    if (!found.length) return res.status(404).json({ error: 'Group not found' });
+    const g = found[0];
+    const updated = await db.update(groupChats).set({
+      memberIds: ((g.memberIds as string[]) || []).filter((id: string) => id !== userId),
+      pendingIds: ((g.pendingIds as string[]) || []).filter((id: string) => id !== userId),
+    }).where(eq(groupChats.id, req.params.id)).returning();
+    return res.json({ ...updated[0], createdAt: updated[0].createdAt.toISOString() });
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
 app.delete('/api/group-chats/:id', async (req, res) => {
   try {
     await db.delete(groupMessages).where(eq(groupMessages.groupId, req.params.id));

@@ -108,6 +108,8 @@ export const api = {
     getMessages: (id: string) => get(`/group-chats/${id}/messages`),
     sendMessage: (id: string, senderId: string, content: string) =>
       post(`/group-chats/${id}/messages`, { senderId, content }),
+    addMember: (id: string, userId: string) => put(`/group-chats/${id}/add-member`, { userId }),
+    removeMember: (id: string, userId: string) => put(`/group-chats/${id}/remove-member`, { userId }),
   },
   attendance: {
     getAll: (userId: string) => get(`/attendance/${userId}`),
