@@ -124,6 +124,7 @@ export default function App() {
   const [profileLookingForExpanded, setProfileLookingForExpanded] = useState<boolean>(false);
 
   const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
   const SWIPE_VIEWS = ['feed', 'dashboard', 'explore', 'messages', 'colleges', 'attendance', 'mycontent', 'profile'];
 
@@ -579,14 +580,17 @@ export default function App() {
 
   const onSwipeStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   }, []);
 
   const onSwipeEnd = useCallback((e: React.TouchEvent) => {
-    const delta = touchStartX.current - e.changedTouches[0].clientX;
+    const dx = touchStartX.current - e.changedTouches[0].clientX;
+    const dy = touchStartY.current - e.changedTouches[0].clientY;
+    if (Math.abs(dx) < Math.abs(dy) * 1.5 || Math.abs(dx) < 55) return;
     const idx = SWIPE_VIEWS.indexOf(activeView);
-    if (delta > 60 && idx < SWIPE_VIEWS.length - 1) {
+    if (dx > 0 && idx < SWIPE_VIEWS.length - 1) {
       setActiveView(SWIPE_VIEWS[idx + 1]);
-    } else if (delta < -60 && idx > 0) {
+    } else if (dx < 0 && idx > 0) {
       setActiveView(SWIPE_VIEWS[idx - 1]);
     }
   }, [activeView]);
@@ -919,27 +923,16 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── MOBILE: horizontal snap-scroll pages ── */}
+      {/* ── MOBILE: single active section ── */}
       <div
-        ref={mobileScrollRef}
-        className="md:hidden flex-1 flex overflow-x-scroll snap-x snap-mandatory"
-        style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-        onScroll={handleMobileScroll}
+        className={`md:hidden flex-1 min-h-0 ${activeView === 'messages' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
+        onTouchStart={onSwipeStart}
+        onTouchEnd={onSwipeEnd}
       >
-        {SWIPE_VIEWS.map((view) => (
-          <div
-            key={view}
-            className={`snap-start w-screen shrink-0 ${
-              view === 'messages' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
-            }`}
-            style={{ touchAction: 'pan-y' }}
-          >
-            <div className={view === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'p-3 pb-4 space-y-4'}>
-              {renderSection(view)}
-            </div>
-          </div>
-        ))}
-        {/* Admin / college_admin overlays when selected from tab strip */}
+        <div className={activeView === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'p-3 pb-4 space-y-4'}>
+          {renderSection(activeView)}
+        </div>
+        {/* Admin / college_admin overlay */}
         {(activeView === 'admin' || activeView === 'college_admin') && (
           <div className="fixed inset-0 z-40 overflow-y-auto" style={{ top: 0, backgroundColor: 'var(--t-bg)' }}>
             <div className="pt-[108px] pb-24 px-3">
