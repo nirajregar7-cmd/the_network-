@@ -610,77 +610,79 @@ export default function App() {
   return (
     <div className={`${activeView === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} w-full flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
-      <header className="border-b border-neutral-200 dark:border-white/10 px-4 lg:px-8 py-3.5 flex items-center justify-between transition-all fixed top-0 left-0 right-0 z-30 backdrop-blur-md" style={{ backgroundColor: 'var(--t-header)' }}>
-        <div className="flex items-center space-x-4 lg:space-x-8">
-          <h1 className="text-xl lg:text-2xl font-serif italic font-black tracking-tight uppercase select-none bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-            The Network
-          </h1>
-          <div className="hidden lg:flex items-center gap-1.5 text-[10px] font-mono tracking-widest opacity-50 uppercase">
-            <span>// Campus Co-founder Hub</span>
-            <span>•</span>
-            <span>Est. 2026</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <button
-            onClick={() => {
-              const keys = Object.keys(THEMES) as ThemeName[];
-              setTheme(keys[(keys.indexOf(theme) + 1) % keys.length]);
-            }}
-            className="md:hidden p-2 rounded-full border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/5 transition-all cursor-pointer text-slate-800 dark:text-slate-100"
-            title={`Theme: ${THEMES[theme].label}`}
-          >
-            <Palette size={14} />
-          </button>
-          
-          <button
-            onClick={handleLogout}
-            className="md:hidden p-2 rounded-full border border-rose-500/10 text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-            title="Log Out"
-          >
-            <LogOut size={14} />
-          </button>
+      {/* ── Top Header ── */}
+      <header className="fixed top-0 left-0 right-0 z-30 transition-all" style={{ backgroundColor: 'var(--t-header)' }}>
+        <div className="flex items-center justify-between px-4 lg:px-8 h-14 border-b border-neutral-200/70 dark:border-white/8 backdrop-blur-xl">
 
-          <NotificationsDropdown
-            userId={currentUser.id}
-            darkMode={darkMode}
-            onNavigate={(view, actorId) => {
-              if (view === 'messages' && actorId) setPreSelectedMsgUserId(actorId);
-              setActiveView(view);
-            }}
-          />
-
-          <div className="hidden sm:flex bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 text-[11px] font-mono items-center font-bold">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
-            Live Database
+          {/* Left — Logo */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg lg:text-xl font-serif italic font-black tracking-tight uppercase select-none bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent leading-none">
+              The Network
+            </h1>
+            <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/8 border border-indigo-500/15 text-[9px] font-mono font-bold text-indigo-500/70 tracking-widest uppercase">
+              Campus Co-founder Hub
+            </span>
           </div>
 
-          {!currentUser.isSuspended && (
-            <button
-              id="header-post-trigger"
-              onClick={() => setShowCreateModal(true)}
-              className="hidden md:flex relative overflow-hidden group py-1.5 px-4 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-pink-500 hover:from-pink-500 hover:to-indigo-600 font-extrabold text-[11px] uppercase tracking-wider text-white shadow-sm hover:shadow-indigo-500/15 hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer items-center gap-1.5 shrink-0 border-0"
-              title="Create post, event, project, community, group, or reel"
-            >
-              <Plus size={13} strokeWidth={2.5} />
-              <span>Create</span>
-            </button>
-          )}
-          
-          <button
-            onClick={() => setActiveView('profile')}
-            className="p-[2.5px] rounded-full bg-gradient-to-tr from-rose-500 via-amber-500 to-indigo-600 cursor-pointer hover:scale-105 transition-transform"
-            title="View my profile"
-          >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 border border-white dark:border-[#09090C] overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-900'}`}>
-              <Avatar avatar={currentUser.avatar} />
+          {/* Right — Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+
+            {/* Live DB pill — desktop only */}
+            <div className="hidden md:flex items-center gap-1.5 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/15 text-[10px] font-mono font-bold">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              Live
             </div>
-          </button>
+
+            {/* Theme cycler — desktop only */}
+            <button
+              onClick={() => {
+                const keys = Object.keys(THEMES) as ThemeName[];
+                setTheme(keys[(keys.indexOf(theme) + 1) % keys.length]);
+              }}
+              className="hidden md:flex p-2 rounded-xl border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/6 transition-all cursor-pointer"
+              title={`Theme: ${THEMES[theme].label}`}
+            >
+              <Palette size={13} />
+            </button>
+
+            {/* Notifications */}
+            <NotificationsDropdown
+              userId={currentUser.id}
+              darkMode={darkMode}
+              onNavigate={(view, actorId) => {
+                if (view === 'messages' && actorId) setPreSelectedMsgUserId(actorId);
+                setActiveView(view);
+              }}
+            />
+
+            {/* Create — desktop only */}
+            {!currentUser.isSuspended && (
+              <button
+                id="header-post-trigger"
+                onClick={() => setShowCreateModal(true)}
+                className="hidden md:flex items-center gap-1.5 py-1.5 px-4 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 hover:from-pink-500 hover:to-indigo-600 font-extrabold text-[11px] uppercase tracking-wider text-white shadow-sm hover:shadow-indigo-500/20 hover:scale-[1.03] active:scale-[0.97] transition-all cursor-pointer border-0 shrink-0"
+                title="Create"
+              >
+                <Plus size={12} strokeWidth={2.5} />
+                Create
+              </button>
+            )}
+
+            {/* Avatar */}
+            <button
+              onClick={() => setActiveView('profile')}
+              className="p-[2px] rounded-full bg-gradient-to-tr from-rose-500 via-amber-500 to-indigo-600 cursor-pointer hover:scale-105 transition-transform shrink-0"
+              title="My profile"
+            >
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs border border-white dark:border-[#09090C] overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                <Avatar avatar={currentUser.avatar} />
+              </div>
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pt-[60px] pb-20 md:pb-4 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
+      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pt-14 pb-28 md:pb-6 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
         
         <aside className={`w-full md:w-60 shrink-0 space-y-4 ${activeView === 'messages' ? 'md:overflow-y-auto md:max-h-full' : ''}`}>
           <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all overflow-x-auto md:overflow-hidden" style={{ backgroundColor: 'var(--t-card)' }}>
