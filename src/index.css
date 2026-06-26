@@ -85,6 +85,15 @@ html.theme-midnight {
   background: rgba(156, 163, 175, 0.4);
 }
 
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); opacity: 0.85; }
+  to   { transform: translateX(0);    opacity: 1;    }
+}
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); opacity: 0.85; }
+  to   { transform: translateX(0);     opacity: 1;    }
+}
+
 @keyframes floatUp {
   0% {
     transform: translateY(0) scale(0.6) rotate(0deg);

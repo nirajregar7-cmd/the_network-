@@ -114,6 +114,9 @@ export default function App() {
   const darkMode = THEMES[theme].isDark;
 
   const [activeView, setActiveView] = useState<string>('feed');
+  const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
+  const [slideKey, setSlideKey] = useState(0);
+  const prevViewRef = useRef<string>('feed');
   const [showNewPostModal, setShowNewPostModal] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeReelData, setActiveReelData] = useState<{ reels: Story[]; index: number } | null>(null);
@@ -197,6 +200,18 @@ export default function App() {
     html.classList.add(`theme-${theme}`);
     if (THEMES[theme].isDark) html.classList.add('dark');
   }, [theme]);
+
+  useEffect(() => {
+    const prev = prevViewRef.current;
+    if (prev === activeView) return;
+    const prevIdx = SWIPE_VIEWS.indexOf(prev);
+    const currIdx = SWIPE_VIEWS.indexOf(activeView);
+    if (prevIdx !== -1 && currIdx !== -1) {
+      setSlideDir(currIdx > prevIdx ? 'left' : 'right');
+      setSlideKey(k => k + 1);
+    }
+    prevViewRef.current = activeView;
+  }, [activeView]);
 
   const loadAppData = useCallback(async () => {
     setIsLoading(true);
@@ -925,11 +940,19 @@ export default function App() {
 
       {/* ── MOBILE: single active section ── */}
       <div
-        className={`md:hidden flex-1 min-h-0 ${activeView === 'messages' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}
+        className={`md:hidden flex-1 min-h-0 overflow-hidden ${activeView === 'messages' ? 'flex flex-col' : ''}`}
         onTouchStart={onSwipeStart}
         onTouchEnd={onSwipeEnd}
       >
-        <div className={activeView === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'p-3 pb-4 space-y-4'}>
+        <div
+          key={slideKey}
+          className={activeView === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'h-full overflow-y-auto p-3 pb-4 space-y-4'}
+          style={{
+            animation: slideDir
+              ? `${slideDir === 'left' ? 'slideInFromRight' : 'slideInFromLeft'} 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both`
+              : undefined,
+          }}
+        >
           {renderSection(activeView)}
         </div>
         {/* Admin / college_admin overlay */}
