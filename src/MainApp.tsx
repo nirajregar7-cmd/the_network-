@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, Post, Community, Connection, DirectMessage, UserReport, Comment, Story } from './types';
 import { ALL_PREDEFINED_CHAPTERS } from './data/chaptersData';
 import { api } from './api';
@@ -122,6 +122,9 @@ export default function App() {
   const [profileActiveTab, setProfileActiveTab] = useState<'card' | 'shares'>('card');
   const [profileInterestsExpanded, setProfileInterestsExpanded] = useState<boolean>(false);
   const [profileLookingForExpanded, setProfileLookingForExpanded] = useState<boolean>(false);
+
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const SWIPE_VIEWS = ['feed', 'dashboard', 'explore', 'messages', 'colleges', 'attendance', 'mycontent', 'profile'];
 
   const [modalPostContent, setModalPostContent] = useState('');
   const [modalSelectedTag, setModalSelectedTag] = useState('Startup Pitch 🚀');
@@ -573,6 +576,20 @@ export default function App() {
     }
   };
 
+  const handleMobileScroll = useCallback(() => {
+    if (!mobileScrollRef.current) return;
+    const idx = Math.round(mobileScrollRef.current.scrollLeft / mobileScrollRef.current.offsetWidth);
+    const view = SWIPE_VIEWS[idx];
+    if (view && view !== activeView) setActiveView(view);
+  }, [activeView]);
+
+  useEffect(() => {
+    const idx = SWIPE_VIEWS.indexOf(activeView);
+    if (idx >= 0 && mobileScrollRef.current) {
+      mobileScrollRef.current.scrollTo({ left: idx * mobileScrollRef.current.offsetWidth, behavior: 'smooth' });
+    }
+  }, [activeView]);
+
   if (isLoading || !sessionRestored) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-[#09090C] text-white' : 'bg-neutral-50 text-slate-900'}`}>
@@ -607,11 +624,180 @@ export default function App() {
     m => m.receiverId === currentUser.id && !m.isRead
   ).length;
 
+  const renderSection = (view: string) => {
+    if (view === 'feed') return (
+      <FeedSection
+        currentUser={currentUser}
+        posts={posts}
+        allUsers={allUsers}
+        communities={communities}
+        connections={connections}
+        onAddPost={handleAddPost}
+        onLikePost={handleLikePost}
+        onAddComment={handleAddComment}
+        darkMode={darkMode}
+        stories={stories}
+        onAddStory={handleAddStory}
+        registeredEvents={registeredEvents}
+        onRegisterEvent={handleRegisterEvent}
+        onViewUserProfile={setViewingUserProfileId}
+        onReactToStory={handleReactToStory}
+        onSendConnectionRequest={(receiverId) => handleSendConnectionRequest(receiverId, 'Friendship', `Hi! I'd love to connect with you.`)}
+        onNavigate={setActiveView}
+        onOpenReel={(reels, index) => setActiveReelData({ reels, index })}
+      />
+    );
+    if (view === 'dashboard') return (
+      <DashboardSection
+        currentUser={currentUser}
+        connections={connections}
+        posts={posts}
+        communities={communities}
+        messages={messages}
+        allUsers={allUsers}
+        onNavigate={setActiveView}
+        darkMode={darkMode}
+        stories={stories}
+        onAddStory={handleAddStory}
+        registeredEvents={registeredEvents}
+        onRegisterEvent={handleRegisterEvent}
+        onReactToStory={handleReactToStory}
+      />
+    );
+    if (view === 'explore') return (
+      <DiscoverySection
+        currentUser={currentUser}
+        allUsers={allUsers}
+        connections={connections}
+        onSendConnectionRequest={handleSendConnectionRequest}
+        onAcceptConnection={handleAcceptConnection}
+        onRejectConnection={handleRejectConnection}
+        onReportUser={handleReportUser}
+        darkMode={darkMode}
+      />
+    );
+    if (view === 'messages') return (
+      <MessagingSection
+        currentUser={currentUser}
+        connections={connections}
+        allUsers={allUsers}
+        messages={messages}
+        onSendMessage={handleSendMessage}
+        darkMode={darkMode}
+        preSelectedUserId={preSelectedMsgUserId || undefined}
+        onViewUserProfile={setViewingUserProfileId}
+        onMessagesRefresh={async () => {
+          try {
+            const fresh = await api.messages.getAll();
+            setMessages(fresh);
+          } catch {}
+        }}
+      />
+    );
+    if (view === 'colleges') return (
+      <CollegesSection
+        currentUser={currentUser}
+        allUsers={allUsers}
+        communities={communities}
+        connections={connections}
+        posts={posts}
+        darkMode={darkMode}
+        onCommunitiesChange={setCommunities}
+        onViewUserProfile={setViewingUserProfileId}
+      />
+    );
+    if (view === 'attendance') return (
+      <AttendanceSection currentUser={currentUser} darkMode={darkMode} />
+    );
+    if (view === 'mycontent') return (
+      <MyContentSection
+        currentUser={currentUser}
+        darkMode={darkMode}
+        posts={posts}
+        allUsers={allUsers}
+        onDeletePost={handleDeletePost}
+        onNavigate={setActiveView}
+      />
+    );
+    if (view === 'profile') return (
+      <ProfileSection
+        currentUser={currentUser}
+        onUpdateProfile={handleUpdateProfile}
+        darkMode={darkMode}
+        communities={communities}
+        connections={connections}
+        allUsers={allUsers}
+      />
+    );
+    if (view === 'projects') return (
+      <ProjectsSection
+        currentUser={currentUser}
+        allUsers={allUsers}
+        connections={connections}
+        darkMode={darkMode}
+        onViewUserProfile={setViewingUserProfileId}
+      />
+    );
+    if (view === 'events') return (
+      <EventsSection
+        currentUser={currentUser}
+        allUsers={allUsers}
+        darkMode={darkMode}
+        onViewUserProfile={setViewingUserProfileId}
+      />
+    );
+    if (view === 'communities') return (
+      <CommunitiesSection
+        currentUser={currentUser}
+        communities={communities}
+        posts={posts}
+        allUsers={allUsers}
+        onJoinCommunity={handleJoinCommunity}
+        onLeaveCommunity={handleLeaveCommunity}
+        onAddPost={handleAddPost}
+        onLikePost={handleLikePost}
+        onAddComment={handleAddComment}
+        onDeletePost={handleDeletePost}
+        darkMode={darkMode}
+        onViewUserProfile={setViewingUserProfileId}
+        onAddResource={handleAddCommunityResource}
+        onAddThread={handleAddCommunityThread}
+        onAddThreadReply={handleAddThreadReply}
+        onCreateCommunity={handleCreateCommunity}
+      />
+    );
+    if (view === 'admin') return (
+      <AdminSection
+        currentUser={currentUser}
+        allUsers={allUsers}
+        reports={reports}
+        posts={posts}
+        communities={communities}
+        onToggleUserSuspension={handleToggleUserSuspension}
+        onResolveReport={handleResolveReport}
+        onDeletePost={handleDeletePost}
+        onAllUsersChange={setAllUsers}
+        darkMode={darkMode}
+      />
+    );
+    if (view === 'college_admin' && currentUser.role === 'college_admin') return (
+      <CollegeAdminSection
+        currentUser={currentUser}
+        allUsers={allUsers}
+        communities={communities}
+        darkMode={darkMode}
+        onCommunitiesChange={setCommunities}
+        onAllUsersChange={setAllUsers}
+      />
+    );
+    return null;
+  };
+
   return (
-    <div className={`${activeView === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} w-full flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
+    <div className={`h-screen overflow-hidden flex flex-col md:h-auto md:min-h-screen md:overflow-x-hidden md:block w-full font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
       {/* ── Top Header ── */}
-      <header className="fixed top-0 left-0 right-0 z-30 transition-all backdrop-blur-xl" style={{ backgroundColor: 'var(--t-header)' }}>
+      <header className="shrink-0 md:fixed md:top-0 md:left-0 md:right-0 z-30 transition-all backdrop-blur-xl" style={{ backgroundColor: 'var(--t-header)' }}>
 
         {/* Main header row */}
         <div className="flex items-center justify-between px-4 lg:px-8 border-b border-neutral-200/70 dark:border-white/8 py-2 md:h-14 md:py-0">
@@ -705,7 +891,7 @@ export default function App() {
         </div>
 
         {/* ── Horizontal scrolling tab nav — mobile only ── */}
-        <div className={`md:hidden border-b border-neutral-200/70 dark:border-white/8 overflow-x-auto no-scrollbar px-3 py-2`}>
+        <div className={`md:hidden border-b border-neutral-200/70 dark:border-white/8 overflow-x-auto no-scrollbar px-3 pt-3 pb-2`}>
           <div className="flex gap-1.5 items-center w-max">
             {([
               { view: 'feed',         icon: <BookOpen size={13} />,       label: 'Home Feed' },
@@ -743,9 +929,38 @@ export default function App() {
         </div>
       </header>
 
-      {/* pt: mobile = header row (~56px) + tab strip (~46px) = ~102px → use pt-[102px]; desktop = h-14 = 56px → pt-14 */}
-      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pt-[104px] md:pt-14 pb-28 md:pb-6 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
-        
+      {/* ── MOBILE: horizontal snap-scroll pages ── */}
+      <div
+        ref={mobileScrollRef}
+        className="md:hidden flex-1 flex overflow-x-scroll snap-x snap-mandatory"
+        style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        onScroll={handleMobileScroll}
+      >
+        {SWIPE_VIEWS.map((view) => (
+          <div
+            key={view}
+            className={`snap-start w-screen shrink-0 ${
+              view === 'messages' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'
+            }`}
+          >
+            <div className={view === 'messages' ? 'flex flex-col flex-1 h-full overflow-hidden' : 'p-3 pb-4 space-y-4'}>
+              {renderSection(view)}
+            </div>
+          </div>
+        ))}
+        {/* Admin / college_admin overlays when selected from tab strip */}
+        {(activeView === 'admin' || activeView === 'college_admin') && (
+          <div className="fixed inset-0 z-40 overflow-y-auto" style={{ top: 0, backgroundColor: 'var(--t-bg)' }}>
+            <div className="pt-[108px] pb-24 px-3">
+              {renderSection(activeView)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── DESKTOP: sidebar + main ── */}
+      <div className={`hidden md:flex max-w-5xl w-full mx-auto flex-row gap-6 p-4 pt-14 pb-6 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : 'min-h-screen'}`}>
+
         <aside className={`hidden md:flex md:flex-col md:w-60 shrink-0 space-y-4 ${activeView === 'messages' ? 'md:overflow-y-auto md:max-h-full' : ''}`}>
           <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all overflow-x-auto md:overflow-hidden" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className="hidden md:flex items-center gap-2 mb-4 pb-2 border-b border-neutral-100 dark:border-white/10">
@@ -883,186 +1098,7 @@ export default function App() {
         </aside>
 
         <main className={`flex-1 min-w-0 ${activeView === 'messages' ? 'flex flex-col min-h-0 overflow-hidden' : 'space-y-6'}`}>
-          {activeView === 'dashboard' && (
-            <DashboardSection
-              currentUser={currentUser}
-              connections={connections}
-              posts={posts}
-              communities={communities}
-              messages={messages}
-              allUsers={allUsers}
-              onNavigate={setActiveView}
-              darkMode={darkMode}
-              stories={stories}
-              onAddStory={handleAddStory}
-              registeredEvents={registeredEvents}
-              onRegisterEvent={handleRegisterEvent}
-              onReactToStory={handleReactToStory}
-            />
-          )}
-
-          {activeView === 'explore' && (
-            <DiscoverySection
-              currentUser={currentUser}
-              allUsers={allUsers}
-              connections={connections}
-              onSendConnectionRequest={handleSendConnectionRequest}
-              onAcceptConnection={handleAcceptConnection}
-              onRejectConnection={handleRejectConnection}
-              onReportUser={handleReportUser}
-              darkMode={darkMode}
-            />
-          )}
-
-          {activeView === 'feed' && (
-            <FeedSection
-              currentUser={currentUser}
-              posts={posts}
-              allUsers={allUsers}
-              communities={communities}
-              connections={connections}
-              onAddPost={handleAddPost}
-              onLikePost={handleLikePost}
-              onAddComment={handleAddComment}
-              darkMode={darkMode}
-              stories={stories}
-              onAddStory={handleAddStory}
-              registeredEvents={registeredEvents}
-              onRegisterEvent={handleRegisterEvent}
-              onViewUserProfile={setViewingUserProfileId}
-              onReactToStory={handleReactToStory}
-              onSendConnectionRequest={(receiverId) => handleSendConnectionRequest(receiverId, 'Friendship', `Hi! I'd love to connect with you.`)}
-              onNavigate={setActiveView}
-              onOpenReel={(reels, index) => setActiveReelData({ reels, index })}
-            />
-          )}
-
-          {activeView === 'projects' && (
-            <ProjectsSection
-              currentUser={currentUser}
-              allUsers={allUsers}
-              connections={connections}
-              darkMode={darkMode}
-              onViewUserProfile={setViewingUserProfileId}
-            />
-          )}
-
-          {activeView === 'colleges' && (
-            <CollegesSection
-              currentUser={currentUser}
-              allUsers={allUsers}
-              communities={communities}
-              connections={connections}
-              posts={posts}
-              darkMode={darkMode}
-              onCommunitiesChange={setCommunities}
-              onViewUserProfile={setViewingUserProfileId}
-            />
-          )}
-
-          {activeView === 'events' && (
-            <EventsSection
-              currentUser={currentUser}
-              allUsers={allUsers}
-              darkMode={darkMode}
-              onViewUserProfile={setViewingUserProfileId}
-            />
-          )}
-
-          {activeView === 'attendance' && (
-            <AttendanceSection
-              currentUser={currentUser}
-              darkMode={darkMode}
-            />
-          )}
-
-          {activeView === 'mycontent' && (
-            <MyContentSection
-              currentUser={currentUser}
-              darkMode={darkMode}
-              posts={posts}
-              allUsers={allUsers}
-              onDeletePost={handleDeletePost}
-              onNavigate={setActiveView}
-            />
-          )}
-
-          {activeView === 'messages' && (
-            <MessagingSection
-              currentUser={currentUser}
-              connections={connections}
-              allUsers={allUsers}
-              messages={messages}
-              onSendMessage={handleSendMessage}
-              darkMode={darkMode}
-              preSelectedUserId={preSelectedMsgUserId || undefined}
-              onViewUserProfile={setViewingUserProfileId}
-              onMessagesRefresh={async () => {
-                try {
-                  const fresh = await api.messages.getAll();
-                  setMessages(fresh);
-                } catch {}
-              }}
-            />
-          )}
-
-          {activeView === 'communities' && (
-            <CommunitiesSection
-              currentUser={currentUser}
-              communities={communities}
-              posts={posts}
-              allUsers={allUsers}
-              onJoinCommunity={handleJoinCommunity}
-              onLeaveCommunity={handleLeaveCommunity}
-              onAddPost={handleAddPost}
-              onLikePost={handleLikePost}
-              onAddComment={handleAddComment}
-              onDeletePost={handleDeletePost}
-              darkMode={darkMode}
-              onViewUserProfile={setViewingUserProfileId}
-              onAddResource={handleAddCommunityResource}
-              onAddThread={handleAddCommunityThread}
-              onAddThreadReply={handleAddThreadReply}
-              onCreateCommunity={handleCreateCommunity}
-            />
-          )}
-
-          {activeView === 'profile' && (
-            <ProfileSection
-              currentUser={currentUser}
-              onUpdateProfile={handleUpdateProfile}
-              darkMode={darkMode}
-              communities={communities}
-              connections={connections}
-              allUsers={allUsers}
-            />
-          )}
-
-          {activeView === 'admin' && (
-            <AdminSection
-              currentUser={currentUser}
-              allUsers={allUsers}
-              reports={reports}
-              posts={posts}
-              communities={communities}
-              onToggleUserSuspension={handleToggleUserSuspension}
-              onResolveReport={handleResolveReport}
-              onDeletePost={handleDeletePost}
-              onAllUsersChange={setAllUsers}
-              darkMode={darkMode}
-            />
-          )}
-
-          {activeView === 'college_admin' && currentUser.role === 'college_admin' && (
-            <CollegeAdminSection
-              currentUser={currentUser}
-              allUsers={allUsers}
-              communities={communities}
-              darkMode={darkMode}
-              onCommunitiesChange={setCommunities}
-              onAllUsersChange={setAllUsers}
-            />
-          )}
+          {renderSection(activeView)}
         </main>
 
       </div>
@@ -1572,7 +1608,7 @@ export default function App() {
     {currentUser && <NotificationSetup userId={currentUser.id} darkMode={darkMode} />}
 
     {/* Mobile Bottom Navigation Bar */}
-    <nav className={`md:hidden fixed bottom-0 left-0 right-0 z-50 border-t flex items-center justify-around px-2 py-2 ${darkMode ? 'bg-[#09090C]/95 border-white/10 backdrop-blur-xl' : 'bg-white/95 border-neutral-200 backdrop-blur-xl'}`}
+    <nav className={`md:hidden shrink-0 z-50 border-t flex items-center justify-around px-2 py-2 ${darkMode ? 'bg-[#09090C]/95 border-white/10 backdrop-blur-xl' : 'bg-white/95 border-neutral-200 backdrop-blur-xl'}`}
       style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
     >
       {[
