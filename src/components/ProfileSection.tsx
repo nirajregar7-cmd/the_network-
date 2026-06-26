@@ -4,7 +4,7 @@ import {
   ShieldCheck, Sparkles, Check, Save, Image as ImageIcon,
   User, Rocket, Users, UserCheck, GraduationCap, MapPin,
   BookOpen, Code, Star, Clock, ExternalLink, Award, LogIn,
-  CheckCircle2, MessageSquare, Handshake, BookMarked, Puzzle
+  CheckCircle2, MessageSquare, Handshake, BookMarked, Puzzle, LogOut
 } from 'lucide-react';
 import CollegeSelector from './CollegeSelector';
 import Avatar from './Avatar';
@@ -17,6 +17,7 @@ interface ProfileSectionProps {
   communities?: Community[];
   connections?: Connection[];
   allUsers?: UserProfile[];
+  onLogout?: () => void;
 }
 
 type Tab = 'edit' | 'projects' | 'clubs' | 'connections';
@@ -42,6 +43,7 @@ export default function ProfileSection({
   communities = [],
   connections = [],
   allUsers = [],
+  onLogout,
 }: ProfileSectionProps) {
   const [activeTab, setActiveTab] = useState<Tab>('edit');
 
@@ -503,6 +505,23 @@ export default function ProfileSection({
               );
             })
           )}
+        </div>
+      )}
+
+      {/* Logout — visible on mobile only (desktop has it in the sidebar) */}
+      {onLogout && (
+        <div className="md:hidden mt-6 pb-2">
+          <button
+            onClick={onLogout}
+            className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border font-semibold text-sm transition-all cursor-pointer ${
+              darkMode
+                ? 'border-red-500/20 text-red-400 bg-red-500/8 hover:bg-red-500/15'
+                : 'border-red-200 text-red-500 bg-red-50 hover:bg-red-100'
+            }`}
+          >
+            <LogOut size={15} />
+            Log Out
+          </button>
         </div>
       )}
     </div>

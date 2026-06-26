@@ -727,6 +727,7 @@ export default function App() {
         communities={communities}
         connections={connections}
         allUsers={allUsers}
+        onLogout={handleLogout}
       />
     );
     if (view === 'projects') return (
@@ -834,15 +835,6 @@ export default function App() {
               <Palette size={15} />
             </button>
 
-            {/* Logout — mobile only */}
-            <button
-              onClick={handleLogout}
-              className={`md:hidden p-2 rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-white/10 hover:bg-white/6 text-slate-400' : 'border-neutral-200 hover:bg-neutral-100 text-slate-500'}`}
-              title="Log Out"
-            >
-              <LogOut size={15} />
-            </button>
-
             {/* Notifications */}
             <NotificationsDropdown
               userId={currentUser.id}
@@ -852,17 +844,6 @@ export default function App() {
                 setActiveView(view);
               }}
             />
-
-            {/* Create circle — mobile only */}
-            {!currentUser.isSuspended && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="md:hidden w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center shadow-md shadow-indigo-500/30 cursor-pointer border-0 hover:bg-indigo-600 active:scale-95 transition-all shrink-0"
-                title="Create"
-              >
-                <Plus size={18} className="text-white" strokeWidth={2.5} />
-              </button>
-            )}
 
             {/* Create pill — desktop only */}
             {!currentUser.isSuspended && (
@@ -891,7 +872,7 @@ export default function App() {
         </div>
 
         {/* ── Horizontal scrolling tab nav — mobile only ── */}
-        <div className={`md:hidden border-b border-neutral-200/70 dark:border-white/8 overflow-x-auto no-scrollbar px-3 pt-3 pb-2`}>
+        <div className={`md:hidden border-b border-neutral-200/70 dark:border-white/8 overflow-x-auto no-scrollbar px-3 pt-4 pb-2.5`}>
           <div className="flex gap-1.5 items-center w-max">
             {([
               { view: 'feed',         icon: <BookOpen size={13} />,       label: 'Home Feed' },
