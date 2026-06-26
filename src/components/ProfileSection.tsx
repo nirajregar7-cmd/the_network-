@@ -139,45 +139,90 @@ export default function ProfileSection({
     <div className="flex-1 min-w-0 space-y-5 pb-10">
       {/* Profile Header Card */}
       <div className={`${card} overflow-hidden`}>
-        <div className="h-20 bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 relative">
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+        {/* Cover banner */}
+        <div className="h-32 bg-gradient-to-br from-indigo-600 via-purple-600 to-rose-500 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 25% 60%, white 1.5px, transparent 1.5px), radial-gradient(circle at 75% 30%, white 1px, transparent 1px)', backgroundSize: '28px 28px, 18px 18px' }} />
+          <div className="absolute -bottom-6 -right-6 w-28 h-28 rounded-full bg-white/5 blur-xl" />
+          <div className="absolute -top-4 -left-4 w-20 h-20 rounded-full bg-white/5 blur-lg" />
+          {/* Logout shortcut */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[10px] font-semibold backdrop-blur-sm transition-all cursor-pointer border border-white/20"
+            >
+              <LogOut size={10} />Log out
+            </button>
+          )}
         </div>
+
         <div className="px-5 pb-5">
-          <div className="flex items-end justify-between gap-3 -mt-8 mb-3">
-            <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 shrink-0">
-              <div className={`w-16 h-16 rounded-full border-4 ${darkMode ? 'border-[#121217]' : 'border-white'} flex items-center justify-center font-bold text-xl overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-800'}`}>
+          {/* Avatar + badges row */}
+          <div className="flex items-end justify-between gap-3 -mt-10 mb-4">
+            <div className="p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 shrink-0 shadow-xl">
+              <div className={`w-18 h-18 w-[72px] h-[72px] rounded-full border-4 ${darkMode ? 'border-[#121217]' : 'border-white'} flex items-center justify-center font-bold text-2xl overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-800'}`}>
                 <Avatar avatar={currentUser.avatar} />
               </div>
             </div>
-            {currentUser.isVerified && (
-              <span className="mb-1 flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[9px] font-bold border border-indigo-500/20">
-                <ShieldCheck size={10} />VERIFIED
+            <div className="flex flex-col items-end gap-1.5 mb-1">
+              {currentUser.isVerified && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[9px] font-bold border border-indigo-500/20">
+                  <ShieldCheck size={10} />VERIFIED
+                </span>
+              )}
+              <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold border ${darkMode ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-neutral-200 text-slate-500'}`}>
+                Year {currentUser.year}
               </span>
-            )}
-          </div>
-          <h2 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>{currentUser.fullName}</h2>
-          <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{currentUser.branch} · {currentUser.college}</p>
-          <div className="flex items-center gap-3 mt-2">
-            <span className={`flex items-center gap-1 text-[10px] font-mono ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-              <GraduationCap size={10} />Year {currentUser.year}
-            </span>
-            <span className={`text-[10px] font-mono ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{currentUser.email}</span>
+            </div>
           </div>
 
+          {/* Name + identity */}
+          <h2 className={`font-extrabold text-base leading-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>{currentUser.fullName}</h2>
+          <p className={`text-[11px] mt-0.5 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{currentUser.branch}</p>
+          <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            <GraduationCap size={10} className="text-indigo-400" />{currentUser.college}
+          </p>
+
+          {/* Bio preview */}
+          {currentUser.aboutMe && (
+            <p className={`text-[11px] mt-3 leading-relaxed line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{currentUser.aboutMe}</p>
+          )}
+
+          {/* Interests pills */}
+          {currentUser.interests?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {currentUser.interests.slice(0, 5).map(interest => (
+                <span key={interest} className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${darkMode ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                  {interest}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Stats row */}
-          <div className="flex gap-4 mt-3 pt-3 border-t border-neutral-100 dark:border-white/5">
-            <div className="text-center">
-              <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{myClubs.length}</div>
-              <div className="text-[9px] text-slate-400">Clubs</div>
+          <div className={`grid grid-cols-3 gap-2 mt-4 pt-4 border-t ${darkMode ? 'border-white/5' : 'border-neutral-100'}`}>
+            <div className={`text-center py-2 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-neutral-50'}`}>
+              <div className={`text-base font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{myClubs.length}</div>
+              <div className="text-[9px] text-slate-400 font-medium mt-0.5">Clubs</div>
             </div>
-            <div className="text-center">
-              <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{myConnections.length}</div>
-              <div className="text-[9px] text-slate-400">Connections</div>
+            <div className={`text-center py-2 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-neutral-50'}`}>
+              <div className={`text-base font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{myConnections.length}</div>
+              <div className="text-[9px] text-slate-400 font-medium mt-0.5">Connections</div>
             </div>
-            <div className="text-center">
-              <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{strength}%</div>
-              <div className="text-[9px] text-slate-400">Profile</div>
+            <div className={`text-center py-2 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-neutral-50'}`}>
+              <div className={`text-base font-extrabold ${strength >= 80 ? 'text-emerald-500' : strength >= 40 ? 'text-amber-500' : 'text-rose-500'}`}>{strength}%</div>
+              <div className="text-[9px] text-slate-400 font-medium mt-0.5">Profile</div>
             </div>
+          </div>
+
+          {/* Profile strength bar */}
+          <div className="mt-3">
+            <div className={`w-full h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-zinc-800' : 'bg-neutral-100'}`}>
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${strength >= 80 ? 'bg-gradient-to-r from-indigo-500 to-emerald-500' : strength >= 40 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                style={{ width: `${strength}%` }}
+              />
+            </div>
+            <p className={`text-[8px] font-mono mt-1 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{strengthMeta.text}</p>
           </div>
         </div>
       </div>

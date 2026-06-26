@@ -26,6 +26,10 @@ import {
   MessageSquare,
   Globe,
   Zap,
+  ChevronDown,
+  Crown,
+  BookOpen,
+  CheckCircle,
 } from 'lucide-react';
 import StoriesBubbleTray from './StoriesBubbleTray';
 import Avatar from './Avatar';
@@ -705,7 +709,7 @@ export default function FeedSection({
       );
     }
 
-    // TYPE 5 — Campus Colleges Card (screenshot style)
+    // TYPE 5 — Campus Colleges Card (full-width banner cards)
     if (typeIndex === 5) {
       const campusColleges = Array.from(
         new Map(
@@ -713,59 +717,90 @@ export default function FeedSection({
             .filter(u => u.college)
             .map(u => [u.college, u])
         ).values()
-      ).slice(0, 8);
+      ).slice(0, 4);
 
       return (
         <div key={key} className={`rounded-2xl border overflow-hidden shadow-sm ${dm ? 'bg-[#121217] border-white/10' : 'bg-white border-neutral-200'}`}>
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between px-4 pt-4 pb-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-xl bg-indigo-500/10 flex items-center justify-center"><span className="text-sm">🏛️</span></div>
               <div>
                 <p className={`text-[9px] font-mono uppercase tracking-widest ${dm ? 'text-slate-500' : 'text-slate-400'}`}>Campus Network</p>
-                <h3 className={`text-sm font-extrabold leading-none mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Colleges</h3>
+                <h3 className={`text-sm font-extrabold leading-none mt-0.5 ${dm ? 'text-white' : 'text-slate-900'}`}>Colleges on Platform</h3>
               </div>
             </div>
             <button onClick={() => onNavigate?.('colleges')} className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer">See All →</button>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto px-4 pb-4 pt-1 no-scrollbar">
-            {campusColleges.map((u, idx) => {
+          <div className="px-4 pb-2 space-y-3">
+            {campusColleges.map((u) => {
               const collegeName = u.college!;
               const imgUrl = getCollegeImage(collegeName);
               const isMyCollege = collegeName === currentUser.college;
               const studentsHere = allUsers.filter(x => x.college === collegeName).length;
-              const yearBadge = u.year ? `${u.year}YR` : `${idx + 1}YEB`;
+              const clubsHere = communities.filter(c => (c as any).college === collegeName).length;
+              const postsHere = posts.filter(p => allUsers.find(x => x.id === p.authorId)?.college === collegeName).length;
+              const adminUser = allUsers.find(x => x.college === collegeName && (x.role === 'college_admin'));
+              const initials = collegeName.split(' ').filter((w: string) => w.length > 2).map((w: string) => w[0]).join('').toUpperCase().slice(0, 3) || collegeName.slice(0, 3).toUpperCase();
+
               return (
                 <div
                   key={collegeName}
                   onClick={() => onNavigate?.('colleges')}
-                  className={`shrink-0 w-44 rounded-2xl overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] ${dm ? 'bg-[#1a1a24]' : 'bg-white'} shadow-md border ${isMyCollege ? 'border-indigo-400/40' : dm ? 'border-white/8' : 'border-neutral-200'}`}
+                  className={`rounded-2xl overflow-hidden cursor-pointer border transition-all hover:shadow-md ${isMyCollege ? (dm ? 'border-indigo-400/30' : 'border-indigo-400/40') : (dm ? 'border-white/8' : 'border-neutral-200')}`}
                 >
-                  <div className="relative h-32 overflow-hidden">
+                  {/* Banner image */}
+                  <div className="relative h-36 overflow-hidden">
                     <img
                       src={imgUrl}
                       alt={collegeName}
                       className="w-full h-full object-cover"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                      onError={e => { (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800&q=80'; }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-amber-400 text-black text-[8px] font-extrabold">⭐ {yearBadge}</span>
-                    <button
-                      onClick={e => e.stopPropagation()}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow"
-                    >
-                      <Heart size={10} className="text-rose-400" />
-                    </button>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+
+                    {/* Expand / chevron top-right */}
+                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                      <ChevronDown size={13} className="text-white" />
+                    </div>
+
+                    {/* Admin badge — bottom of image, above avatar */}
+                    {adminUser && (
+                      <div className="absolute bottom-10 left-3 flex items-center gap-1 bg-black/55 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                        <Crown size={9} className="text-amber-400" />
+                        <span className="text-[9px] text-white font-semibold">Admin: {adminUser.fullName.split(' ')[0]}</span>
+                      </div>
+                    )}
+
+                    {/* College initials avatar overlapping bottom */}
+                    <div className={`absolute -bottom-5 left-3 w-11 h-11 rounded-full border-[2.5px] ${dm ? 'border-[#121217]' : 'border-white'} overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-extrabold text-[11px] text-white shadow-lg z-10`}>
+                      {initials}
+                    </div>
+
+                    {/* My College pill */}
                     {isMyCollege && (
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-indigo-500 text-white text-[8px] font-bold">My College</span>
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-indigo-500 text-white text-[8px] font-bold shadow">My College</span>
                     )}
                   </div>
-                  <div className={`p-3 ${dm ? 'bg-[#1a1a24]' : 'bg-white'}`}>
-                    <p className={`text-[11px] font-extrabold leading-tight truncate ${dm ? 'text-white' : 'text-slate-900'}`}>{collegeName}</p>
-                    <p className={`text-[9px] mt-0.5 ${dm ? 'text-slate-400' : 'text-slate-500'}`}>India · {new Date().getFullYear()}</p>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <span className="text-amber-400 text-[10px]">★</span>
-                      <span className={`text-[9px] font-semibold ${dm ? 'text-slate-300' : 'text-slate-700'}`}>{studentsHere} student{studentsHere !== 1 ? 's' : ''}</span>
+
+                  {/* Card body */}
+                  <div className={`pt-7 pb-3 px-3 ${dm ? 'bg-[#1a1a24]' : 'bg-white'}`}>
+                    <h4 className={`font-extrabold text-[13px] leading-tight truncate ${dm ? 'text-white' : 'text-slate-900'}`}>{collegeName}</h4>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+                      <span className={`flex items-center gap-1 text-[10px] ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <Users size={9} />{studentsHere} student{studentsHere !== 1 ? 's' : ''} on platform
+                      </span>
+                      <span className={`flex items-center gap-1 text-[10px] ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <BookOpen size={9} />{clubsHere} {clubsHere === 1 ? 'club' : 'clubs'}
+                      </span>
+                      <span className={`flex items-center gap-1 text-[10px] ${dm ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <MessageCircle size={9} />{postsHere} posts
+                      </span>
+                      {isMyCollege && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500">
+                          <CheckCircle size={9} />Joined
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -773,7 +808,7 @@ export default function FeedSection({
             })}
           </div>
 
-          <div className={`px-4 pb-3 pt-1 flex items-center justify-between border-t ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
+          <div className={`px-4 pb-3 pt-2 flex items-center justify-between border-t ${dm ? 'border-white/5' : 'border-neutral-100'}`}>
             <button onClick={() => setDismissedSuggestions(prev => new Set([...prev, typeIndex]))} className={`text-[10px] ${dm ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'} transition-all cursor-pointer`}>Not interested</button>
             <button onClick={() => onNavigate?.('colleges')} className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer">Browse all colleges →</button>
           </div>
@@ -1365,8 +1400,8 @@ export default function FeedSection({
               );
 
               const shouldInject = true;
-              // Priority: Study Partners → Friendship → Co-Founders → Groups → Events → Communities → Explore Campus
-              const FEED_TYPES = [6, 7, 8, 3, 4, 1, 5];
+              // Priority: Study Partners → Friendship → Co-Founders → Colleges → Events → Communities → Groups
+              const FEED_TYPES = [6, 7, 8, 5, 4, 1, 3];
               const suggTypeIndex = FEED_TYPES[postIndex % FEED_TYPES.length];
               const suggCard = shouldInject ? renderSuggestionCard(suggTypeIndex, `sugg-${postIndex}`) : null;
               return [postCard, ...(suggCard ? [suggCard] : [])];
