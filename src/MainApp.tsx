@@ -611,13 +611,16 @@ export default function App() {
     <div className={`${activeView === 'messages' ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} w-full flex flex-col font-sans transition-all duration-300 ${darkMode ? 'text-slate-100' : 'text-slate-950'}`} style={{ backgroundColor: 'var(--t-bg)' }}>
       
       {/* ── Top Header ── */}
-      <header className="fixed top-0 left-0 right-0 z-30 transition-all" style={{ backgroundColor: 'var(--t-header)' }}>
-        <div className="flex items-center justify-between px-4 lg:px-8 h-14 border-b border-neutral-200/70 dark:border-white/8 backdrop-blur-xl">
+      <header className="fixed top-0 left-0 right-0 z-30 transition-all backdrop-blur-xl" style={{ backgroundColor: 'var(--t-header)' }}>
 
-          {/* Left — Logo */}
+        {/* Main header row */}
+        <div className="flex items-center justify-between px-4 lg:px-8 border-b border-neutral-200/70 dark:border-white/8 py-2 md:h-14 md:py-0">
+
+          {/* Left — Logo: 2-line on mobile, 1-line on desktop */}
           <div className="flex items-center gap-3">
-            <h1 className="text-lg lg:text-xl font-serif italic font-black tracking-tight uppercase select-none bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent leading-none">
-              The Network
+            <h1 className="font-serif italic font-black tracking-tight uppercase select-none bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent leading-[1.1] text-lg md:text-xl">
+              <span className="block md:inline">The</span>
+              <span className="block md:inline md:ml-1">Network</span>
             </h1>
             <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/8 border border-indigo-500/15 text-[9px] font-mono font-bold text-indigo-500/70 tracking-widest uppercase">
               Campus Co-founder Hub
@@ -625,7 +628,7 @@ export default function App() {
           </div>
 
           {/* Right — Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-1.5">
 
             {/* Live DB pill — desktop only */}
             <div className="hidden md:flex items-center gap-1.5 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/15 text-[10px] font-mono font-bold">
@@ -633,16 +636,25 @@ export default function App() {
               Live
             </div>
 
-            {/* Theme cycler — desktop only */}
+            {/* Theme cycler */}
             <button
               onClick={() => {
                 const keys = Object.keys(THEMES) as ThemeName[];
                 setTheme(keys[(keys.indexOf(theme) + 1) % keys.length]);
               }}
-              className="hidden md:flex p-2 rounded-xl border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/6 transition-all cursor-pointer"
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-white/10 hover:bg-white/6 text-slate-300' : 'border-neutral-200 hover:bg-neutral-100 text-slate-600'}`}
               title={`Theme: ${THEMES[theme].label}`}
             >
-              <Palette size={13} />
+              <Palette size={15} />
+            </button>
+
+            {/* Logout — mobile only */}
+            <button
+              onClick={handleLogout}
+              className={`md:hidden p-2 rounded-xl border transition-all cursor-pointer ${darkMode ? 'border-white/10 hover:bg-white/6 text-slate-400' : 'border-neutral-200 hover:bg-neutral-100 text-slate-500'}`}
+              title="Log Out"
+            >
+              <LogOut size={15} />
             </button>
 
             {/* Notifications */}
@@ -655,7 +667,18 @@ export default function App() {
               }}
             />
 
-            {/* Create — desktop only */}
+            {/* Create circle — mobile only */}
+            {!currentUser.isSuspended && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="md:hidden w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center shadow-md shadow-indigo-500/30 cursor-pointer border-0 hover:bg-indigo-600 active:scale-95 transition-all shrink-0"
+                title="Create"
+              >
+                <Plus size={18} className="text-white" strokeWidth={2.5} />
+              </button>
+            )}
+
+            {/* Create pill — desktop only */}
             {!currentUser.isSuspended && (
               <button
                 id="header-post-trigger"
@@ -671,20 +694,59 @@ export default function App() {
             {/* Avatar */}
             <button
               onClick={() => setActiveView('profile')}
-              className="p-[2px] rounded-full bg-gradient-to-tr from-rose-500 via-amber-500 to-indigo-600 cursor-pointer hover:scale-105 transition-transform shrink-0"
+              className="p-[2.5px] rounded-full bg-gradient-to-tr from-rose-500 via-amber-500 to-indigo-600 cursor-pointer hover:scale-105 transition-transform shrink-0"
               title="My profile"
             >
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs border border-white dark:border-[#09090C] overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-900'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border-2 border-white dark:border-zinc-900 overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-900'}`}>
                 <Avatar avatar={currentUser.avatar} />
               </div>
             </button>
           </div>
         </div>
+
+        {/* ── Horizontal scrolling tab nav — mobile only ── */}
+        <div className={`md:hidden border-b border-neutral-200/70 dark:border-white/8 overflow-x-auto no-scrollbar px-3 py-2`}>
+          <div className="flex gap-1.5 items-center w-max">
+            {([
+              { view: 'feed',         icon: <BookOpen size={13} />,       label: 'Home Feed' },
+              { view: 'dashboard',    icon: <LayoutDashboard size={13} />, label: 'Dashboard' },
+              { view: 'explore',      icon: <Search size={13} />,          label: 'Discovery' },
+              { view: 'messages',     icon: <MessageSquare size={13} />,   label: 'College Chats', badge: totalUnreadMessages },
+              { view: 'colleges',     icon: <Building2 size={13} />,       label: 'Colleges' },
+              { view: 'attendance',   icon: <ClipboardCheck size={13} />,  label: 'Attendance' },
+              { view: 'mycontent',    icon: <LayoutGrid size={13} />,      label: 'My Content' },
+              { view: 'profile',      icon: <Settings size={13} />,        label: 'Profile' },
+              ...(currentUser.role === 'admin'         ? [{ view: 'admin',         icon: <ShieldAlert size={13} />, label: 'Admin' }] : []),
+              ...(currentUser.role === 'college_admin' ? [{ view: 'college_admin', icon: <Crown size={13} />,      label: 'College Panel' }] : []),
+            ] as { view: string; icon: React.ReactNode; label: string; badge?: number }[]).map(item => (
+              <button
+                key={item.view}
+                onClick={() => setActiveView(item.view)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all cursor-pointer border-0 whitespace-nowrap relative ${
+                  activeView === item.view
+                    ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/25'
+                    : darkMode
+                      ? 'text-slate-400 hover:text-white hover:bg-white/8 bg-white/4'
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-neutral-100 bg-neutral-100/80'
+                }`}
+              >
+                {item.icon}
+                {item.label}
+                {item.badge && item.badge > 0 ? (
+                  <span className="ml-0.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[8px] font-black flex items-center justify-center shrink-0">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </div>
       </header>
 
-      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pt-14 pb-28 md:pb-6 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
+      {/* pt: mobile = header row (~56px) + tab strip (~46px) = ~102px → use pt-[102px]; desktop = h-14 = 56px → pt-14 */}
+      <div className={`flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row gap-6 p-4 pt-[104px] md:pt-14 pb-28 md:pb-6 ${activeView === 'messages' ? 'min-h-0 overflow-hidden' : ''}`}>
         
-        <aside className={`w-full md:w-60 shrink-0 space-y-4 ${activeView === 'messages' ? 'md:overflow-y-auto md:max-h-full' : ''}`}>
+        <aside className={`hidden md:flex md:flex-col md:w-60 shrink-0 space-y-4 ${activeView === 'messages' ? 'md:overflow-y-auto md:max-h-full' : ''}`}>
           <div className="p-4 rounded-2xl border border-neutral-200/80 dark:border-white/10 shadow-sm transition-all overflow-x-auto md:overflow-hidden" style={{ backgroundColor: 'var(--t-card)' }}>
             <div className="hidden md:flex items-center gap-2 mb-4 pb-2 border-b border-neutral-100 dark:border-white/10">
               <span className="p-1 text-white bg-indigo-500 rounded-lg">
