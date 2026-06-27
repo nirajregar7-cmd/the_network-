@@ -188,9 +188,9 @@ app.get('/api/users/:id', async (req, res) => {
 
 app.put('/api/users/:id', async (req, res) => {
   try {
-    const { fullName, college, branch, year, aboutMe, interests, skills, lookingFor, privacySettings, avatar } = req.body;
+    const { fullName, college, branch, year, aboutMe, interests, skills, lookingFor, privacySettings, avatar, coverImage } = req.body;
     const updated = await db.update(users).set({
-      fullName, college, branch, year, aboutMe, interests, skills, lookingFor, privacySettings, avatar
+      fullName, college, branch, year, aboutMe, interests, skills, lookingFor, privacySettings, avatar, coverImage
     }).where(eq(users.id, req.params.id)).returning();
     if (!updated.length) return res.status(404).json({ error: 'User not found' });
     return res.json(toUserProfile(updated[0]));

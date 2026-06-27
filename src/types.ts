@@ -6,6 +6,7 @@ export interface UserProfile {
   year: number; // 1 to 4 or 5
   email: string;
   avatar: string;
+  coverImage?: string | null;
   aboutMe: string;
   interests: string[];
   skills: string[];

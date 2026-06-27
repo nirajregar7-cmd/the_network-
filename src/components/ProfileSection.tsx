@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Community, Connection, Project } from '../types';
 import {
-  ShieldCheck, Sparkles, Check, Save, Image as ImageIcon,
+  ShieldCheck, Sparkles, Check, Save, Image as ImageIcon, X,
   User, Rocket, Users, UserCheck, GraduationCap, MapPin,
   BookOpen, Code, Star, Clock, ExternalLink, Award, LogIn,
   CheckCircle2, MessageSquare, Handshake, BookMarked, Puzzle, LogOut
@@ -54,6 +54,8 @@ export default function ProfileSection({
   const [branch, setBranch] = useState(currentUser.branch);
   const [year, setYear] = useState(currentUser.year);
   const [avatar, setAvatar] = useState(currentUser.avatar);
+  const [coverImage, setCoverImage] = useState<string | null | undefined>(currentUser.coverImage);
+  const coverFileRef = React.useRef<HTMLInputElement>(null);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(currentUser.interests);
   const [selectedSkills, setSelectedSkills] = useState<string[]>(currentUser.skills);
   const [selectedLookingFor, setSelectedLookingFor] = useState<string[]>(currentUser.lookingFor);
@@ -110,7 +112,7 @@ export default function ProfileSection({
     e.preventDefault();
     onUpdateProfile({
       ...currentUser,
-      fullName, aboutMe, college, branch, year, avatar,
+      fullName, aboutMe, college, branch, year, avatar, coverImage,
       interests: selectedInterests,
       skills: selectedSkills,
       lookingFor: selectedLookingFor,
@@ -138,17 +140,58 @@ export default function ProfileSection({
   return (
     <div className="flex-1 min-w-0 space-y-5 pb-10">
       {/* Profile Header Card */}
-      <div className={`${card} overflow-hidden`}>
+      <div className={`${card} overflow-visible`}>
         {/* Cover banner */}
-        <div className="h-32 bg-gradient-to-br from-indigo-600 via-purple-600 to-rose-500 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 25% 60%, white 1.5px, transparent 1.5px), radial-gradient(circle at 75% 30%, white 1px, transparent 1px)', backgroundSize: '28px 28px, 18px 18px' }} />
-          <div className="absolute -bottom-6 -right-6 w-28 h-28 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute -top-4 -left-4 w-20 h-20 rounded-full bg-white/5 blur-lg" />
-          {/* Logout shortcut */}
+        <div className="h-40 rounded-t-2xl relative overflow-hidden">
+          {/* Background: cover photo or gradient */}
+          {coverImage ? (
+            <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-rose-500" />
+              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 25% 60%, white 1.5px, transparent 1.5px), radial-gradient(circle at 75% 30%, white 1px, transparent 1px)', backgroundSize: '28px 28px, 18px 18px' }} />
+            </>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+
+          {/* Cover photo upload button */}
+          <input
+            ref={coverFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 8 * 1024 * 1024) { alert('Too large (max 8MB)'); return; }
+              const reader = new FileReader();
+              reader.onloadend = () => setCoverImage(reader.result as string);
+              reader.readAsDataURL(file);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => coverFileRef.current?.click()}
+            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/50 hover:bg-black/70 text-white text-[10px] font-semibold backdrop-blur-sm transition-all cursor-pointer border border-white/20"
+          >
+            <ImageIcon size={11} />Add Cover Photo
+          </button>
+
+          {coverImage && (
+            <button
+              type="button"
+              onClick={() => setCoverImage(null)}
+              className="absolute bottom-3 left-3 flex items-center gap-1 px-2 py-1 rounded-lg bg-black/50 hover:bg-rose-600/80 text-white text-[9px] font-semibold backdrop-blur-sm cursor-pointer border border-white/20"
+            >
+              <X size={10} />Remove
+            </button>
+          )}
+
+          {/* Logout */}
           {onLogout && (
             <button
               onClick={onLogout}
-              className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[10px] font-semibold backdrop-blur-sm transition-all cursor-pointer border border-white/20"
+              className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/40 hover:bg-black/60 text-white text-[10px] font-semibold backdrop-blur-sm transition-all cursor-pointer border border-white/20"
             >
               <LogOut size={10} />Log out
             </button>
@@ -156,14 +199,14 @@ export default function ProfileSection({
         </div>
 
         <div className="px-5 pb-5">
-          {/* Avatar + badges row */}
-          <div className="flex items-end justify-between gap-3 -mt-10 mb-4">
-            <div className="p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 shrink-0 shadow-xl">
-              <div className={`w-18 h-18 w-[72px] h-[72px] rounded-full border-4 ${darkMode ? 'border-[#121217]' : 'border-white'} flex items-center justify-center font-bold text-2xl overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-800'}`}>
+          {/* Avatar overlapping banner — pushed up with negative margin */}
+          <div className="flex items-end justify-between gap-3 -mt-12 mb-4">
+            <div className="p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-indigo-600 shrink-0 shadow-2xl" style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))' }}>
+              <div className={`w-[88px] h-[88px] rounded-full border-4 ${darkMode ? 'border-[#121217]' : 'border-white'} flex items-center justify-center font-bold text-2xl overflow-hidden ${darkMode ? 'bg-zinc-900 text-white' : 'bg-slate-100 text-slate-800'}`}>
                 <Avatar avatar={currentUser.avatar} />
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1.5 mb-1">
+            <div className="flex flex-col items-end gap-1.5 pb-1">
               {currentUser.isVerified && (
                 <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[9px] font-bold border border-indigo-500/20">
                   <ShieldCheck size={10} />VERIFIED

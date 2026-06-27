@@ -51,6 +51,7 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   avatar: text('avatar').notNull(),
+  coverImage: text('cover_image'),
   aboutMe: text('about_me').notNull().default(''),
   interests: jsonb('interests').notNull().default([]),
   skills: jsonb('skills').notNull().default([]),
