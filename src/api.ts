@@ -121,6 +121,11 @@ export const api = {
   batchGroup: {
     ensure: (userId: string) => post('/batch-group/ensure', { userId }),
   },
+  collegeSettings: {
+    getAll: () => get('/college-settings') as Promise<Record<string, string | null>>,
+    setCover: (college: string, coverImage: string | null) =>
+      put(`/college-settings/${encodeURIComponent(college)}`, { coverImage }),
+  },
   collegeAdmin: {
     assign: (userId: string, college: string | null) => put('/admin/college-admin', { userId, college }),
     getAnnouncements: (college: string) => get(`/college-announcements/${encodeURIComponent(college)}`),

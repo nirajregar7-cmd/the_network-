@@ -49,6 +49,42 @@ export default function CollegeAdminSection({
   const college = currentUser.collegeAdminOf || currentUser.college;
 
   const [tab, setTab] = useState<Tab>('announcements');
+
+  // Cover photo state
+  const [coverImage, setCoverImageState] = useState<string | null>(null);
+  const [coverSaving, setCoverSaving] = useState(false);
+  const coverFileRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    api.collegeSettings.getAll().then(map => {
+      setCoverImageState(map[college] ?? null);
+    }).catch(() => {});
+  }, [college]);
+
+  const handleCoverUpload = async (file: File) => {
+    if (file.size > 8 * 1024 * 1024) { alert('Too large (max 8MB)'); return; }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const dataUrl = reader.result as string;
+      setCoverSaving(true);
+      try {
+        await api.collegeSettings.setCover(college, dataUrl);
+        setCoverImageState(dataUrl);
+      } catch {}
+      setCoverSaving(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveCover = async () => {
+    setCoverSaving(true);
+    try {
+      await api.collegeSettings.setCover(college, null);
+      setCoverImageState(null);
+    } catch {}
+    setCoverSaving(false);
+  };
+
   const [announcements, setAnnouncements] = useState<CollegeAnnouncement[]>([]);
   const [loadingAnn, setLoadingAnn] = useState(true);
 
@@ -184,23 +220,65 @@ export default function CollegeAdminSection({
 
   return (
     <div className="space-y-5 pb-10">
-      {/* Header */}
-      <div className={`p-5 rounded-2xl border border-amber-500/20 ${darkMode ? 'bg-amber-950/10' : 'bg-amber-500/[0.04]'}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
-            <Crown size={18} className="text-amber-500" />
+      {/* College Banner / Cover Photo */}
+      <div className={`rounded-2xl overflow-hidden border ${darkMode ? 'border-white/10' : 'border-neutral-200'}`}>
+        {/* Banner area */}
+        <div className="relative h-40 overflow-hidden">
+          {coverImage ? (
+            <img src={coverImage} alt={college} className="w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+
+          {/* College name overlay */}
+          <div className="absolute bottom-3 left-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Crown size={11} className="text-amber-400" />
+              <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">College Admin</span>
+            </div>
+            <h2 className="text-white text-lg font-black leading-tight drop-shadow-md">{college}</h2>
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
-              College Admin Panel
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 text-[9px] font-bold uppercase tracking-wider">
-                {college}
-              </span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Manage announcements, clubs, and students for your college
-            </p>
-          </div>
+
+          {/* Hidden file input */}
+          <input
+            ref={coverFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleCoverUpload(f); e.target.value = ''; }}
+          />
+
+          {/* Upload button */}
+          <button
+            type="button"
+            onClick={() => coverFileRef.current?.click()}
+            disabled={coverSaving}
+            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/55 hover:bg-black/75 text-white text-[10px] font-semibold backdrop-blur-sm transition-all cursor-pointer border border-white/20 disabled:opacity-60"
+          >
+            <Camera size={11} />{coverSaving ? 'Saving…' : coverImage ? 'Change Photo' : 'Add Cover Photo'}
+          </button>
+
+          {/* Remove button */}
+          {coverImage && !coverSaving && (
+            <button
+              type="button"
+              onClick={handleRemoveCover}
+              className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg bg-black/50 hover:bg-rose-600/80 text-white text-[9px] font-semibold backdrop-blur-sm cursor-pointer border border-white/20"
+            >
+              <X size={10} />Remove
+            </button>
+          )}
+        </div>
+
+        {/* Sub-header info */}
+        <div className={`px-4 py-3 flex items-center justify-between ${darkMode ? 'bg-[#121217]' : 'bg-white'}`}>
+          <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            Manage announcements, clubs, and students
+          </p>
+          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${darkMode ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
+            Admin Panel
+          </span>
         </div>
       </div>
 

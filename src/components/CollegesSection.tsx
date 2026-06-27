@@ -100,6 +100,7 @@ export default function CollegesSection({
   const [announcements, setAnnouncements] = useState<Record<string, CollegeAnnouncement[]>>({});
   const [loadingAnn, setLoadingAnn] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<Record<string, 'students' | 'posts' | 'clubs'>>({});
+  const [collegeCoverImages, setCollegeCoverImages] = useState<Record<string, string | null>>({});
 
   const allColleges = useMemo(() => {
     const cols = new Set<string>();
@@ -149,6 +150,10 @@ export default function CollegesSection({
   const filteredColleges = allColleges.filter(c =>
     search === '' || c.toLowerCase().includes(search.toLowerCase())
   );
+
+  useEffect(() => {
+    api.collegeSettings.getAll().then(setCollegeCoverImages).catch(() => {});
+  }, []);
 
   const fetchAnnouncements = async (college: string) => {
     if (announcements[college] || loadingAnn.has(college)) return;
@@ -291,7 +296,7 @@ export default function CollegesSection({
           const isExpanded = expandedCollege === college;
           const myClubCount = clubs.filter(c => c.memberIds.includes(currentUser.id)).length;
           const grad = collegeGradient(college);
-          const campusImg = getCollegeImage(college);
+          const campusImg = collegeCoverImages[college] || getCollegeImage(college);
           const collegeAnn = announcements[college] || [];
           const isStudentsExpanded = expandedStudents.has(college);
           const visibleStudents = isStudentsExpanded ? students : students.slice(0, 8);

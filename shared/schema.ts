@@ -228,6 +228,12 @@ export const storiesRelations = relations(stories, ({ one }) => ({
   author: one(users, { fields: [stories.authorId], references: [users.id] }),
 }));
 
+export const collegeSettings = pgTable('college_settings', {
+  college: text('college').primaryKey(),
+  coverImage: text('cover_image'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const reportsRelations = relations(reports, ({ one }) => ({
   reporter: one(users, { fields: [reports.reporterId], references: [users.id], relationName: 'reporter' }),
   reportedUser: one(users, { fields: [reports.reportedUserId], references: [users.id], relationName: 'reportedUser' }),

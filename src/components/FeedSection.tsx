@@ -140,11 +140,13 @@ export default function FeedSection({
   const [eventDetailPopup, setEventDetailPopup] = useState<CampusEvent | null>(null);
   const [feedProjects, setFeedProjects] = useState<Project[]>([]);
   const [feedGroups, setFeedGroups] = useState<GroupChat[]>([]);
+  const [collegeCoverImages, setCollegeCoverImages] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     api.events.getAll().then((data: CampusEvent[]) => setCampusEvents(data)).catch(() => {});
     api.projects.getAll().then((data: Project[]) => setFeedProjects(data)).catch(() => {});
     api.groupChats.getAll().then((data: GroupChat[]) => setFeedGroups(data)).catch(() => {});
+    api.collegeSettings.getAll().then(setCollegeCoverImages).catch(() => {});
   }, []);
 
   const handleEventRegister = async (ev: CampusEvent) => {
@@ -735,7 +737,7 @@ export default function FeedSection({
           <div className="px-4 pb-2 space-y-3">
             {campusColleges.map((u) => {
               const collegeName = u.college!;
-              const imgUrl = getCollegeImage(collegeName);
+              const imgUrl = collegeCoverImages[collegeName] || getCollegeImage(collegeName);
               const isMyCollege = collegeName === currentUser.college;
               const studentsHere = allUsers.filter(x => x.college === collegeName).length;
               const clubsHere = communities.filter(c => (c as any).college === collegeName).length;

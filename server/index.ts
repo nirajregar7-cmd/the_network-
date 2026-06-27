@@ -7,7 +7,8 @@ import webpush from 'web-push';
 import { db } from './db.js';
 import {
   users, posts, comments, connections, messages, communities, stories, reports, pushSubscriptions,
-  notifications, projects, events, groupChats, groupMessages, collegeAnnouncements, attendanceSubjects
+  notifications, projects, events, groupChats, groupMessages, collegeAnnouncements, attendanceSubjects,
+  collegeSettings
 } from '../shared/schema.js';
 import { eq, or, and, desc } from 'drizzle-orm';
 
@@ -1401,6 +1402,28 @@ app.delete('/api/college-announcements/:id', async (req, res) => {
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
+});
+
+// ─── COLLEGE SETTINGS (cover photo) ──────────────────────────────────────────
+
+app.get('/api/college-settings', async (_req, res) => {
+  try {
+    const rows = await db.select().from(collegeSettings);
+    const map: Record<string, string | null> = {};
+    rows.forEach(r => { map[r.college] = r.coverImage ?? null; });
+    return res.json(map);
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/college-settings/:college', async (req, res) => {
+  try {
+    const { coverImage } = req.body;
+    const col = decodeURIComponent(req.params.college);
+    await db.insert(collegeSettings)
+      .values({ college: col, coverImage: coverImage ?? null })
+      .onConflictDoUpdate({ target: collegeSettings.college, set: { coverImage: coverImage ?? null, updatedAt: new Date() } });
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ error: err.message }); }
 });
 
 // ─── ATTENDANCE TRACKER ───────────────────────────────────────────────────────
