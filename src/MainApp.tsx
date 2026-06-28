@@ -673,6 +673,7 @@ export default function App() {
         onSendConnectionRequest={(receiverId) => handleSendConnectionRequest(receiverId, 'Friendship', `Hi! I'd love to connect with you.`)}
         onNavigate={setActiveView}
         onOpenReel={(reels, index) => setActiveReelData({ reels, index })}
+        onOpenPostModal={() => setShowNewPostModal(true)}
       />
     );
     if (view === 'dashboard') return (

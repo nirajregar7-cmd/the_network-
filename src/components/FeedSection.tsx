@@ -1,36 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Post, Comment, Community, Story, Connection, CampusEvent, Project, GroupChat } from '../types';
 import { getCollegeImage } from '../data/collegeImages';
-import {
-  Heart,
-  MessageCircle,
-  Send,
-  Sparkles,
-  Plus,
-  Trash2,
-  Clock,
-  Image as ImageIcon,
-  Calendar,
-  Layers,
-  ArrowRight,
-  TrendingUp,
-  UserPlus,
-  Sparkle,
-  MapPin,
-  X,
-  CheckCircle2,
-  ExternalLink,
-  Share2,
-  Rocket,
-  Users,
-  MessageSquare,
-  Globe,
-  Zap,
-  ChevronDown,
-  Crown,
-  BookOpen,
-  CheckCircle,
-} from 'lucide-react';
+import { Heart, MessageCircle, Send, Sparkles, Plus, Trash2, Clock, Image as ImageIcon, Calendar, Layers, ArrowRight, TrendingUp, UserPlus, Sparkle, MapPin, X, CircleCheck as CheckCircle2, ExternalLink, Share2, Rocket, Users, MessageSquare, Globe, Zap, ChevronDown, Crown, BookOpen, CircleCheck as CheckCircle } from 'lucide-react';
 import StoriesBubbleTray from './StoriesBubbleTray';
 import Avatar from './Avatar';
 import { api } from '../api';
@@ -68,6 +39,7 @@ interface FeedSectionProps {
   onSendConnectionRequest?: (receiverId: string) => void;
   onNavigate?: (view: string) => void;
   onOpenReel?: (reels: Story[], index: number) => void;
+  onOpenPostModal?: () => void;
 }
 
 const POST_PRESETS = [
@@ -99,6 +71,7 @@ export default function FeedSection({
   onSendConnectionRequest,
   onNavigate,
   onOpenReel,
+  onOpenPostModal,
 }: FeedSectionProps) {
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedTag, setSelectedTag] = useState('Startup Pitch 🚀');
@@ -1176,15 +1149,27 @@ export default function FeedSection({
                   <span className="text-[9px] text-slate-400 font-mono truncate min-w-0">
                     Posting to {selectedCommunity ? communities.find(c => c.id === selectedCommunity)?.name : 'General Campus Desk'}
                   </span>
-                  
-                  <button
-                    id="btn-submit-post"
-                    type="submit"
-                    className="shrink-0 py-1.5 px-4 rounded-xl bg-indigo-550 hover:bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-wider flex items-center gap-1 cursor-pointer transition-all shadow-sm"
-                  >
-                    <Plus size={13} />
-                    <span>Launch Post</span>
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {onOpenPostModal && (
+                      <button
+                        type="button"
+                        onClick={onOpenPostModal}
+                        className="shrink-0 py-1.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white font-bold uppercase text-[10px] tracking-wider flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+                      >
+                        <Sparkles size={13} />
+                        <span>Live Preview</span>
+                      </button>
+                    )}
+                    <button
+                      id="btn-submit-post"
+                      type="submit"
+                      className="shrink-0 py-1.5 px-4 rounded-xl bg-indigo-550 hover:bg-indigo-600 text-white font-bold uppercase text-[10px] tracking-wider flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+                    >
+                      <Plus size={13} />
+                      <span>Launch Post</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
